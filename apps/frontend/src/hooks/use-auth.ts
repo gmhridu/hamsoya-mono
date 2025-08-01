@@ -2,8 +2,10 @@ import { apiClient } from '@/lib/api-client';
 import { getUserFriendlyMessage } from '@/lib/error-messages';
 import { queryClient, queryKeys } from '@/lib/query-client';
 import { useAuthActions, useAuthStore } from '@/store/auth-store';
+import { AUTH_CONFIG, AUTH_QUERY_KEYS } from '@/types/auth';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 // Hook for user registration
@@ -24,7 +26,7 @@ export function useRegister() {
       clearError();
       return apiClient.register(data);
     },
-    onSuccess: (data, variables) => {
+    onSuccess: (_, variables) => {
       setLoading(false);
       toast.success('Registration successful! Please check your email for verification.');
       // Redirect to OTP verification page with email parameter
@@ -54,16 +56,26 @@ export function useLogin() {
     onSuccess: (data: any) => {
       setLoading(false);
 
-      // Assuming the API returns user data
-      if (data.user) {
-        login(data.user);
+      // Handle the response structure from backend
+      let userData = null;
+      if (data?.data?.user) {
+        userData = data.data.user;
+        login(userData);
+      } else if (data?.user) {
+        userData = data.user;
+        login(userData);
+      }
+
+      // Update server auth provider state
+      if (typeof window !== 'undefined' && userData) {
+        window.dispatchEvent(new CustomEvent('auth:login', { detail: userData }));
       }
 
       // Invalidate and refetch user data
       queryClient.invalidateQueries({ queryKey: queryKeys.auth.me });
       queryClient.invalidateQueries({ queryKey: queryKeys.auth.profile });
 
-      toast.success('Login successful!');
+      // Note: Toast is handled by the main useLogin hook for better UX
       router.push('/');
     },
     onError: (error: any) => {
@@ -80,22 +92,51 @@ export function useLogout() {
   const router = useRouter();
   const { logout } = useAuthActions();
 
+  const handleLogoutCleanup = () => {
+    // Clear auth state
+    logout();
+
+    // Clear server auth provider state
+    if (typeof window !== 'undefined') {
+      // Trigger a custom event to notify ServerAuthProvider
+      window.dispatchEvent(new CustomEvent('auth:logout'));
+    }
+
+    // Clear all user-related queries
+    queryClient.removeQueries({ queryKey: queryKeys.auth.me });
+    queryClient.removeQueries({ queryKey: queryKeys.auth.profile });
+
+    // Clear any other user-related data from query cache
+    queryClient.removeQueries({
+      predicate: query =>
+        query.queryKey.some(
+          key =>
+            typeof key === 'string' &&
+            (key.includes('user') || key.includes('profile') || key.includes('auth'))
+        ),
+    });
+
+    // Clear localStorage items that might contain user data
+    if (typeof window !== 'undefined') {
+      // Clear any user-specific localStorage items
+      Object.keys(localStorage).forEach(key => {
+        if (key.includes('user') || key.includes('auth') || key.includes('token')) {
+          localStorage.removeItem(key);
+        }
+      });
+    }
+  };
+
   return useMutation({
     mutationFn: () => apiClient.logout(),
     onSuccess: () => {
-      // Clear auth state
-      logout();
-
-      // Clear all user-related queries
-      queryClient.removeQueries({ queryKey: queryKeys.auth.me });
-      queryClient.removeQueries({ queryKey: queryKeys.auth.profile });
-
+      handleLogoutCleanup();
       toast.success('Logged out successfully');
       router.push('/');
     },
-    onError: (error: any) => {
+    onError: () => {
       // Even if logout fails on server, clear local state
-      logout();
+      handleLogoutCleanup();
       toast.success('Logged out successfully');
       router.push('/');
     },
@@ -166,7 +207,7 @@ export function useCooldownStatus(email: string | null) {
     queryFn: async () => {
       if (!email) throw new Error('Email is required');
       const response = await apiClient.getCooldownStatus(email);
-      const data = response.data || response;
+      const data = (response as any)?.data || response;
       return {
         cooldownRemaining: data.cooldownRemaining || 0,
         canResend: data.canResend ?? true,
@@ -228,24 +269,131 @@ export function useResetPassword() {
   });
 }
 
-// Hook for getting current user
+// Hook for getting current user with optimized caching
 export function useCurrentUser() {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, user } = useAuthStore();
 
   return useQuery({
-    queryKey: queryKeys.auth.me,
+    queryKey: AUTH_QUERY_KEYS.me, // Use consistent query key
     queryFn: () => apiClient.getCurrentUser(),
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 30 * 60 * 1000, // 30 minutes
-    enabled: isAuthenticated, // Only fetch if user is authenticated
+    staleTime: AUTH_CONFIG.staleTime, // 15 minutes - longer than token expiry
+    gcTime: AUTH_CONFIG.gcTime, // 2 hours
+    enabled: isAuthenticated,
     retry: (failureCount, error: any) => {
-      // Don't retry if unauthorized
-      if (error?.status === 401) {
+      if (error?.statusCode === 401) {
         return false;
       }
-      return failureCount < 3;
+      return failureCount < AUTH_CONFIG.retryAttempts;
     },
+    refetchOnWindowFocus: false,
+    refetchOnMount: false, // Prevent refetch on mount if data is fresh
+    initialData: user ? { data: user } : undefined, // Use persisted data as initial data
   });
+}
+
+// Hook for initializing authentication state on app load
+export function useAuthInitialization() {
+  const { setUser, setLoading, logout } = useAuthActions();
+  const { isAuthenticated } = useAuthStore();
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Prevent hydration issues by only checking tokens after mount
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Check if we have access token in cookies to determine if we should try to fetch user
+  const hasAccessToken =
+    isMounted && typeof window !== 'undefined' && document.cookie.includes('accessToken=');
+
+  const {
+    data: userData,
+    error,
+    isLoading,
+  } = useQuery({
+    queryKey: AUTH_QUERY_KEYS.me, // Use consistent query key
+    queryFn: () => apiClient.getCurrentUser(),
+    staleTime: AUTH_CONFIG.staleTime, // 15 minutes - longer than token expiry
+    gcTime: AUTH_CONFIG.gcTime, // 2 hours
+    enabled: hasAccessToken, // Only fetch if we have an access token and are mounted
+    retry: (failureCount, error: any) => {
+      if (error?.statusCode === 401) {
+        return false;
+      }
+      return failureCount < AUTH_CONFIG.retryAttempts;
+    },
+    refetchOnWindowFocus: false, // Prevent unnecessary refetches
+    refetchOnMount: false, // Prevent automatic refetch on mount
+  });
+
+  useEffect(() => {
+    // Don't initialize until component is mounted to prevent hydration issues
+    if (!isMounted) {
+      return;
+    }
+
+    // If we have persisted auth state but no access token, clear the auth state
+    if (isAuthenticated && !hasAccessToken) {
+      logout();
+      setIsInitialized(true);
+      return;
+    }
+
+    // If we have persisted auth and access token, mark as initialized
+    if (isAuthenticated && hasAccessToken && !isInitialized) {
+      setIsInitialized(true);
+      setLoading(false);
+      return;
+    }
+
+    // If we have fresh user data from API, update store
+    if ((userData as any)?.data) {
+      setUser((userData as any).data);
+      setIsInitialized(true);
+      setLoading(false);
+      return;
+    }
+
+    // If there's an error (like 401), clear auth state
+    if (error) {
+      if (error.statusCode === 401) {
+        logout();
+      }
+      setIsInitialized(true);
+      setLoading(false);
+      return;
+    }
+
+    // If no access token and not loading, mark as initialized (guest user)
+    if (!hasAccessToken && !isLoading) {
+      setIsInitialized(true);
+      setLoading(false);
+      return;
+    }
+
+    // If query finished loading (success or error), mark as initialized
+    if (!isLoading) {
+      setIsInitialized(true);
+      setLoading(false);
+    }
+  }, [
+    userData,
+    error,
+    isLoading,
+    isInitialized,
+    setUser,
+    setLoading,
+    logout,
+    isAuthenticated,
+    hasAccessToken,
+    isMounted,
+  ]);
+
+  return {
+    isInitialized,
+    isLoading: !isInitialized && (isLoading || (hasAccessToken && !userData && !error)),
+  };
 }
 
 // Hook for getting user profile (same as current user for now)
@@ -267,8 +415,8 @@ export function useUpdateProfile() {
       updateProfile(data);
 
       // Invalidate user data to refetch updated profile
-      queryClient.invalidateQueries({ queryKey: queryKeys.auth.me });
-      queryClient.invalidateQueries({ queryKey: queryKeys.auth.profile });
+      queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEYS.me });
+      queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEYS.profile });
 
       toast.success('Profile updated successfully!');
     },

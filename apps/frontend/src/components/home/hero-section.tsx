@@ -78,6 +78,7 @@ export function HeroSection() {
             src={slide.image}
             alt={slide.title}
             fill
+            sizes="100vw"
             className="object-cover"
             priority={index === 0}
           />
@@ -111,7 +112,11 @@ export function HeroSection() {
                     {slide.description}
                   </p>
                   <div className="flex flex-col sm:flex-row gap-4">
-                    <Button asChild size="lg" className="bg-primary hover:bg-primary/90">
+                    <Button
+                      asChild
+                      size="lg"
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                    >
                       <Link href={slide.href}>
                         <ShoppingBag className="mr-2 h-5 w-5" />
                         {slide.cta}
@@ -119,11 +124,14 @@ export function HeroSection() {
                     </Button>
                     <Button
                       asChild
-                      variant="outline"
+                      variant="secondary"
                       size="lg"
-                      className="border-white text-white hover:bg-white hover:text-black"
+                      className="bg-white/95 text-gray-900 border-2 border-white hover:bg-white hover:text-black shadow-lg backdrop-blur-sm font-medium transition-all duration-300"
                     >
-                      <Link href="/products">View All Products</Link>
+                      <Link href="/products">
+                        <ShoppingBag className="mr-2 h-4 w-4" />
+                        View All Products
+                      </Link>
                     </Button>
                   </div>
                 </>

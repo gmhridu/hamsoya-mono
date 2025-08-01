@@ -2,36 +2,34 @@ import { neon } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-http';
 import * as schema from './schema';
 
-// Create the connection
+// Connection pool for database connections
+let dbConnectionPool: Map<string, ReturnType<typeof drizzle>> = new Map();
+
+// Create the connection with pooling
 export const createDbConnection = (databaseUrl: string) => {
-  console.log(
-    '🔗 Creating database connection with URL:',
-    databaseUrl.replace(/:[^:@]*@/, ':***@')
-  );
+  // Check if connection already exists in pool
+  if (dbConnectionPool.has(databaseUrl)) {
+    return dbConnectionPool.get(databaseUrl)!;
+  }
+
+  // Create new connection
   const sql = neon(databaseUrl);
-  return drizzle(sql, { schema });
+  const db = drizzle(sql, { schema });
+
+  // Store in pool
+  dbConnectionPool.set(databaseUrl, db);
+
+  return db;
 };
 
 // Test database connection
 export const testDbConnection = async (databaseUrl: string) => {
   try {
-    console.log('🧪 Testing database connection...');
-    console.log('🔗 Database URL (masked):', databaseUrl.replace(/:[^:@]*@/, ':***@'));
-    console.log('🔗 Database URL length:', databaseUrl.length);
-    console.log('🔗 Database URL starts with:', databaseUrl.substring(0, 20));
-
     const sql = neon(databaseUrl);
-    const result = await sql`SELECT 1 as test`;
-    console.log('✅ Database connection test successful:', result);
+    await sql`SELECT 1 as test`;
     return true;
   } catch (error) {
     console.error('❌ Database connection test failed:', error);
-    console.error('🔍 Error details:', {
-      message: error instanceof Error ? error.message : 'Unknown error',
-      path: (error as any)?.path,
-      code: (error as any)?.code,
-      errno: (error as any)?.errno,
-    });
     return false;
   }
 };
@@ -43,8 +41,6 @@ export const getDb = (env?: any) => {
   if (!databaseUrl) {
     throw new Error('DATABASE_URL environment variable is required');
   }
-
-  console.log('🔍 Using DATABASE_URL from:', env?.DATABASE_URL ? 'env parameter' : 'process.env');
 
   return createDbConnection(databaseUrl);
 };

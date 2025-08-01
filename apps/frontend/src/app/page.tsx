@@ -1,55 +1,53 @@
-import { CategoryGrid } from '@/components/home/category-grid';
-import { FeaturedProducts } from '@/components/home/featured-products';
-import { HeroSection } from '@/components/home/hero-section';
-import { PreOrderGuide } from '@/components/home/preorder-guide';
-import { ReviewsCarousel } from '@/components/home/reviews-carousel';
-import { USPHighlights } from '@/components/home/usp-highlights';
-import {
-  OrganizationStructuredData,
-  WebsiteStructuredData,
-} from '@/components/seo/structured-data';
-import { BRAND_NAME } from '@/lib/constants';
-import { Metadata } from 'next';
+/**
+ * Home Page - App Router
+ * Server-side rendered home page with instant authentication and data hydration
+ * Professional UX with zero loading states
+ */
+
+import { HomeClient } from '@/components/home/home-client';
+import { SEO_DEFAULTS } from '@/lib/constants';
+import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: `${BRAND_NAME} | Premium Organic Food Products in Bangladesh`,
-  description:
-    'Discover premium organic food products including pure ghee, natural honey, spices, and traditional foods. Free delivery across Bangladesh with cash on delivery.',
-  keywords:
-    'organic food, pure ghee, natural honey, spices, traditional food, online grocery, bangladesh, cash on delivery, free delivery',
+  title: SEO_DEFAULTS.title,
+  description: SEO_DEFAULTS.description,
+  keywords: SEO_DEFAULTS.keywords,
   openGraph: {
-    title: `${BRAND_NAME} | Premium Organic Food Products in Bangladesh`,
-    description:
-      'Discover premium organic food products including pure ghee, natural honey, spices, and traditional foods. Free delivery across Bangladesh with cash on delivery.',
+    title: SEO_DEFAULTS.title,
+    description: SEO_DEFAULTS.description,
     type: 'website',
-    locale: 'en_US',
+    url: 'https://hamsoya.com',
+    images: [
+      {
+        url: SEO_DEFAULTS.ogImage,
+        width: 1200,
+        height: 630,
+        alt: 'Hamsoya - Premium Organic Food Products',
+      },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: `${BRAND_NAME} | Premium Organic Food Products in Bangladesh`,
-    description:
-      'Discover premium organic food products including pure ghee, natural honey, spices, and traditional foods.',
+    title: SEO_DEFAULTS.title,
+    description: SEO_DEFAULTS.description,
+    images: [SEO_DEFAULTS.ogImage],
   },
   alternates: {
-    canonical: '/',
+    canonical: 'https://hamsoya.com',
   },
 };
 
-export default function Home() {
-  return (
-    <>
-      {/* Structured Data */}
-      <OrganizationStructuredData page="home" />
-      <WebsiteStructuredData />
+/**
+ * Home page with centralized authentication
+ * User data provided by ServerAuthProvider - zero API calls, zero loading states
+ */
+export default function HomePage() {
+  // User data is provided by ServerAuthProvider in layout.tsx
+  // No API calls needed - instant authentication state available via useServerAuth()
 
-      <div className="min-h-screen">
-        <HeroSection />
-        <CategoryGrid />
-        <FeaturedProducts />
-        <USPHighlights />
-        <PreOrderGuide />
-        <ReviewsCarousel />
-      </div>
-    </>
+  return (
+    <div className="min-h-screen">
+      <HomeClient />
+    </div>
   );
 }

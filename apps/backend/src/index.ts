@@ -4,6 +4,7 @@ import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { prettyJSON } from 'hono/pretty-json';
 
+import { smartCache } from './middleware/cache';
 import { errorHandler } from './middleware/error';
 import routes from './routes';
 import { createContext } from './trpc/context';
@@ -15,6 +16,7 @@ const app = new Hono();
 // Global middleware
 app.use('*', logger());
 app.use('*', prettyJSON());
+app.use('*', smartCache);
 
 // Environment middleware for development
 app.use('*', async (c, next) => {

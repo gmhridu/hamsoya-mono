@@ -158,7 +158,6 @@ export const optionalAuthMiddleware = async (c: Context, next: Next) => {
     }
   } catch (error) {
     // Ignore errors in optional auth
-    console.log('Optional auth failed:', error);
   }
 
   await next();

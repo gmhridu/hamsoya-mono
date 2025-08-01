@@ -20,6 +20,7 @@ export class UserService {
         email: users.email,
         role: users.role,
         phone_number: users.phone_number,
+        profile_image_url: users.profile_image_url,
         is_verified: users.is_verified,
         created_at: users.created_at,
       })

@@ -27,6 +27,10 @@ app.get('/', authMiddleware, async c => {
 
     const userProfile = await authService.getUserProfile(user.id);
 
+    // Set cache headers for user profile (short cache since it can change)
+    c.header('Cache-Control', 'private, max-age=30, must-revalidate');
+    c.header('ETag', `"user-${user.id}-${Date.now()}"`);
+
     return c.json(successResponse(userProfile), 200);
   } catch (error) {
     console.error('Get user profile error:', error);

@@ -26,14 +26,27 @@ app.post('/', async c => {
     const authService = new AuthService(c.env);
     const result = await authService.refreshToken(refreshToken);
 
+    // Get user data from the access token payload
+    const { verifyAccessToken } = await import('../../lib/jwt');
+    const payload = verifyAccessToken(result.accessToken, c.env);
+
+    const user = {
+      id: payload.userId,
+      email: payload.email,
+      name: payload.name || '',
+      role: payload.role,
+      profile_image_url: payload.profile_image_url,
+      is_verified: payload.is_verified || false,
+    };
+
     // Set new secure HTTP-only cookies
     const isProduction = c.env?.NODE_ENV === 'production' || process.env.NODE_ENV === 'production';
 
     setCookie(c, 'accessToken', result.accessToken, {
-      httpOnly: true,
+      httpOnly: false, // Allow JavaScript access for API calls
       secure: isProduction,
       sameSite: 'Strict',
-      maxAge: 15 * 60, // 15 minutes
+      maxAge: 5 * 60, // 5 minutes = 300 seconds
       path: '/',
     });
 
@@ -41,19 +54,20 @@ app.post('/', async c => {
       httpOnly: true,
       secure: isProduction,
       sameSite: 'Strict',
-      maxAge: 7 * 24 * 60 * 60, // 7 days
+      maxAge: 30 * 24 * 60 * 60, // 30 days = 2,592,000 seconds
       path: '/',
     });
 
     return c.json(
       successResponse({
         message: 'Tokens refreshed successfully',
+        user,
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
       }),
       200
     );
   } catch (error) {
-    console.error('Refresh token error:', error);
-
     if (error instanceof Error) {
       return c.json(errorResponse(error.message), 401);
     }

@@ -17,8 +17,6 @@ app.post('/', zValidator('json', VerifyOTPSchema), async c => {
 
     return c.json(successResponse(result, 'Email verified successfully'), 200);
   } catch (error) {
-    console.error('Verification error:', error);
-
     if (error instanceof AppError) {
       let userFriendlyMessage = error.message;
       let errorCode = 'VERIFICATION_FAILED';

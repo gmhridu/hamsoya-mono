@@ -15,6 +15,7 @@ import { config } from 'dotenv';
 import { resolve } from 'path';
 import { testDbConnection } from './db/index';
 import app from './index';
+import { getRedis } from './lib/redis';
 
 // Load environment variables from .env files
 // Load in order: .env.local, .env.dev, .env
@@ -73,6 +74,24 @@ async function testDatabase() {
   console.log('✅ Database connection successful');
 }
 
+// Test and initialize Redis connection
+async function initializeRedis() {
+  try {
+    console.log('🔍 Initializing Redis connection...');
+    const redis = getRedis();
+
+    // Force connection by running a simple command
+    await redis.ping();
+    console.log('✅ Redis connection successful');
+
+    return redis;
+  } catch (error) {
+    console.error('❌ Redis connection failed:', error);
+    console.error('💡 Make sure your Redis server is running and REDIS_URL is correct.');
+    process.exit(1);
+  }
+}
+
 // Set default values for optional environment variables
 process.env.NODE_ENV = process.env.NODE_ENV || 'development';
 process.env.FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
@@ -83,15 +102,16 @@ process.env.SMTP_SERVICE = process.env.SMTP_SERVICE || 'gmail';
 
 // Start the server
 async function startServer() {
-  // Test database connection first
-  await testDatabase();
-
-  const port = parseInt(process.env.PORT || '5000', 10);
-
+  // Initialize connections in parallel for faster startup
   console.log('🚀 Starting Hamsoya Backend Development Server...');
   console.log(`📍 Environment: ${process.env.NODE_ENV}`);
   console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL}`);
   console.log(`🔗 Backend URL: ${process.env.BACKEND_URL}`);
+
+  // Test database and Redis connections in parallel
+  await Promise.all([testDatabase(), initializeRedis()]);
+
+  const port = parseInt(process.env.PORT || '5000', 10);
 
   serve(
     {

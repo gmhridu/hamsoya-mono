@@ -8,7 +8,7 @@ export interface ApiError {
   details?: any;
 }
 
-export type ErrorType = 
+export type ErrorType =
   | 'network'
   | 'server'
   | 'authentication'
@@ -58,7 +58,7 @@ export function useErrorHandler() {
             message: error.message || 'Please check your input and try again.',
             canRetry: false,
           };
-        
+
         case 401:
           return {
             type: 'authentication',
@@ -67,15 +67,15 @@ export function useErrorHandler() {
             canRetry: false,
             shouldRedirect: '/login',
           };
-        
+
         case 403:
           return {
             type: 'authorization',
             title: 'Access Denied',
-            message: 'You don\'t have permission to access this resource.',
+            message: "You don't have permission to access this resource.",
             canRetry: false,
           };
-        
+
         case 404:
           return {
             type: 'not_found',
@@ -83,7 +83,7 @@ export function useErrorHandler() {
             message: error.message || 'The requested resource was not found.',
             canRetry: false,
           };
-        
+
         case 429:
           return {
             type: 'rate_limit',
@@ -91,7 +91,7 @@ export function useErrorHandler() {
             message: 'Please wait a moment before trying again.',
             canRetry: true,
           };
-        
+
         case 500:
         case 502:
         case 503:
@@ -102,7 +102,7 @@ export function useErrorHandler() {
             message: 'Our servers are experiencing issues. Please try again later.',
             canRetry: true,
           };
-        
+
         default:
           return {
             type: 'unknown',
@@ -122,93 +122,101 @@ export function useErrorHandler() {
     };
   }, []);
 
-  const handleError = useCallback((error: any, options?: {
-    showToast?: boolean;
-    toastType?: 'error' | 'warning' | 'info';
-    customMessage?: string;
-  }) => {
-    const errorInfo = classifyError(error);
-    
-    // Log error for debugging
-    console.error('Error handled:', error, errorInfo);
-    
-    // Show toast notification if requested
-    if (options?.showToast !== false) {
-      const message = options?.customMessage || errorInfo.message;
-      const toastType = options?.toastType || 'error';
-      
-      switch (toastType) {
-        case 'error':
-          toast.error(errorInfo.title, { description: message });
-          break;
-        case 'warning':
-          toast.warning(errorInfo.title, { description: message });
-          break;
-        case 'info':
-          toast.info(errorInfo.title, { description: message });
-          break;
+  const handleError = useCallback(
+    (
+      error: any,
+      options?: {
+        showToast?: boolean;
+        toastType?: 'error' | 'warning' | 'info';
+        customMessage?: string;
       }
-    }
-    
-    // Handle redirects
-    if (errorInfo.shouldRedirect) {
-      setTimeout(() => {
-        window.location.href = errorInfo.shouldRedirect!;
-      }, 1000);
-    }
-    
-    return errorInfo;
-  }, [classifyError]);
+    ) => {
+      const errorInfo = classifyError(error);
 
-  const handleApiError = useCallback((error: any, context?: string) => {
-    const contextMessages: Record<string, string> = {
-      'products': 'Unable to load products',
-      'categories': 'Unable to load categories',
-      'auth': 'Authentication failed',
-      'cart': 'Cart operation failed',
-      'search': 'Search failed',
-    };
-    
-    const customMessage = context ? contextMessages[context] : undefined;
-    
-    return handleError(error, {
-      showToast: true,
-      customMessage,
-    });
-  }, [handleError]);
+      // Log error for debugging
+      console.error('Error handled:', error, errorInfo);
 
-  const createRetryHandler = useCallback((
-    originalFunction: () => Promise<any>,
-    maxRetries: number = 3,
-    delay: number = 1000
-  ) => {
-    let retryCount = 0;
-    
-    const retry = async (): Promise<any> => {
-      try {
-        return await originalFunction();
-      } catch (error) {
-        const errorInfo = classifyError(error);
-        
-        if (errorInfo.canRetry && retryCount < maxRetries) {
-          retryCount++;
-          
-          // Show retry toast
-          toast.info(`Retrying... (${retryCount}/${maxRetries})`);
-          
-          // Wait before retrying
-          await new Promise(resolve => setTimeout(resolve, delay * retryCount));
-          
-          return retry();
-        } else {
-          // Max retries reached or error is not retryable
-          throw error;
+      // Show toast notification if requested
+      if (options?.showToast !== false) {
+        const message = options?.customMessage || errorInfo.message;
+        const toastType = options?.toastType || 'error';
+
+        switch (toastType) {
+          case 'error':
+            toast.error(errorInfo.title, { description: message });
+            break;
+          case 'warning':
+            toast.warning(errorInfo.title, { description: message });
+            break;
+          case 'info':
+            toast.info(errorInfo.title, { description: message });
+            break;
         }
       }
-    };
-    
-    return retry;
-  }, [classifyError]);
+
+      // Handle redirects
+      if (errorInfo.shouldRedirect) {
+        setTimeout(() => {
+          window.location.href = errorInfo.shouldRedirect!;
+        }, 1000);
+      }
+
+      return errorInfo;
+    },
+    [classifyError]
+  );
+
+  const handleApiError = useCallback(
+    (error: any, context?: string) => {
+      const contextMessages: Record<string, string> = {
+        products: 'Unable to load products',
+        categories: 'Unable to load categories',
+        auth: 'Authentication failed',
+        cart: 'Cart operation failed',
+        search: 'Search failed',
+      };
+
+      const customMessage = context ? contextMessages[context] : undefined;
+
+      return handleError(error, {
+        showToast: true,
+        customMessage,
+      });
+    },
+    [handleError]
+  );
+
+  const createRetryHandler = useCallback(
+    (originalFunction: () => Promise<any>, maxRetries: number = 3, delay: number = 1000) => {
+      let retryCount = 0;
+
+      const retry = async (): Promise<any> => {
+        try {
+          return await originalFunction();
+        } catch (error) {
+          const errorInfo = classifyError(error);
+
+          if (errorInfo.canRetry && retryCount < maxRetries) {
+            retryCount++;
+
+            // Show retry toast
+            toast.info(`Retrying... (${retryCount}/${maxRetries})`);
+
+            // Wait before retrying
+            await new Promise(resolve => setTimeout(resolve, delay * retryCount));
+
+            return retry();
+          } else {
+            // Max retries reached or error is not retryable
+            throw error;
+          }
+        }
+      };
+
+      return retry;
+    },
+    [classifyError]
+  );
 
   return {
     handleError,

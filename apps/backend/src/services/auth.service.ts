@@ -86,16 +86,10 @@ export class AuthService {
     await this.redis.setOTP(email, otp);
     await this.redis.setCooldown(email);
 
-    // Development mode: Log OTP for debugging (remove in production)
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`🔍 Development mode: OTP for ${email} is: ${otp}`);
-    }
-
     // Use name from registration data or existing user
     const userName = name || registrationData?.name || user?.name || 'User';
 
     // Send email using optimized enhanced templates
-    console.log(`🚀 Sending OTP verification email to ${email}...`);
     const emailStart = Date.now();
 
     try {
@@ -104,21 +98,16 @@ export class AuthService {
       await sendEnhancedOTPVerificationEmail(email, userName, otp, this.env);
 
       const emailTime = Date.now() - emailStart;
-      console.log(`✅ Professional EJS OTP email sent to ${email} in ${emailTime}ms`);
     } catch (error) {
       const emailTime = Date.now() - emailStart;
-      console.error(`❌ Professional email failed after ${emailTime}ms:`, error);
 
       // Fallback to legacy email template if EJS fails
       try {
         await sendOTPVerificationEmail(email, userName, otp, this.env);
         const fallbackTime = Date.now() - emailStart;
-        console.log(`✅ Fallback legacy email sent to ${email} in ${fallbackTime}ms`);
       } catch (fallbackError) {
-        console.error('❌ Failed to send fallback email:', fallbackError);
         // In development, still provide helpful feedback
         if (process.env.NODE_ENV === 'development') {
-          console.log(`🔍 Development mode: OTP generated for ${email} (check email for code)`);
           return {
             message: `Verification OTP generated. Check your email for the verification code.`,
           };
@@ -227,21 +216,31 @@ export class AuthService {
       throw new AppError('Invalid email or password', 401);
     }
 
-    // Generate tokens
+    // Generate tokens with complete user data
     const tokenPayload = {
       userId: user.id,
       email: user.email,
+      name: user.name,
       role: user.role as UserRole,
+      profile_image_url: user.profile_image_url || undefined,
+      is_verified: user.is_verified,
     };
 
     const accessToken = generateAccessToken(tokenPayload, this.env);
     const refreshToken = generateRefreshToken(tokenPayload, this.env);
 
-    // Store refresh token in database
+    // Hash refresh token before storing in database
+    const { hashToken } = await import('../lib/crypto');
+    const hashedRefreshToken = hashToken(refreshToken);
+
+    // Clean up any existing refresh tokens for this user to prevent token mismatch
+    await this.db.delete(refreshTokens).where(eq(refreshTokens.user_id, user.id));
+
+    // Store hashed refresh token in database
     await this.db.insert(refreshTokens).values({
       user_id: user.id,
-      token_hash: refreshToken, // In production, hash this
-      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+      token_hash: hashedRefreshToken,
+      expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
     });
 
     // Return user without password
@@ -260,11 +259,17 @@ export class AuthService {
       // Verify refresh token
       const payload = verifyRefreshToken(token, this.env);
 
+      // Hash the provided token to compare with stored hash
+      const { hashToken } = await import('../lib/crypto');
+      const hashedToken = hashToken(token);
+
       // Check if token exists in database
       const storedToken = await this.db
         .select()
         .from(refreshTokens)
-        .where(and(eq(refreshTokens.token_hash, token), eq(refreshTokens.user_id, payload.userId)))
+        .where(
+          and(eq(refreshTokens.token_hash, hashedToken), eq(refreshTokens.user_id, payload.userId))
+        )
         .limit(1);
 
       if (storedToken.length === 0) {
@@ -279,31 +284,34 @@ export class AuthService {
         throw new AppError('Refresh token expired', 401);
       }
 
-      // Generate new tokens
-      const newAccessToken = generateAccessToken(
-        {
-          userId: payload.userId,
-          email: payload.email,
-          role: payload.role,
-        },
-        this.env
-      );
+      // Get fresh user data for token generation
+      const user = await this.getUserByEmail(payload.email);
+      if (!user) {
+        throw new AppError('User not found', 401);
+      }
 
-      const newRefreshToken = generateRefreshToken(
-        {
-          userId: payload.userId,
-          email: payload.email,
-          role: payload.role,
-        },
-        this.env
-      );
+      // Generate new tokens with complete user data
+      const tokenPayload = {
+        userId: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role as UserRole,
+        profile_image_url: user.profile_image_url || undefined,
+        is_verified: user.is_verified,
+      };
+
+      const newAccessToken = generateAccessToken(tokenPayload, this.env);
+      const newRefreshToken = generateRefreshToken(tokenPayload, this.env);
+
+      // Hash new refresh token before storing
+      const hashedNewRefreshToken = hashToken(newRefreshToken);
 
       // Update refresh token in database
       await this.db
         .update(refreshTokens)
         .set({
-          token_hash: newRefreshToken,
-          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          token_hash: hashedNewRefreshToken,
+          expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
         })
         .where(eq(refreshTokens.id, storedToken[0].id));
 
@@ -313,6 +321,29 @@ export class AuthService {
       };
     } catch (error) {
       throw new AppError('Invalid or expired refresh token', 401);
+    }
+  }
+
+  // Logout user and cleanup refresh tokens
+  async logout(userId: string, refreshToken?: string): Promise<{ message: string }> {
+    try {
+      if (refreshToken) {
+        // Hash the refresh token to find it in database
+        const { hashToken } = await import('../lib/crypto');
+        const hashedToken = hashToken(refreshToken);
+
+        // Delete specific refresh token
+        await this.db
+          .delete(refreshTokens)
+          .where(and(eq(refreshTokens.token_hash, hashedToken), eq(refreshTokens.user_id, userId)));
+      } else {
+        // Delete all refresh tokens for this user
+        await this.db.delete(refreshTokens).where(eq(refreshTokens.user_id, userId));
+      }
+
+      return { message: 'Logged out successfully' };
+    } catch (error) {
+      return { message: 'Logged out successfully' };
     }
   }
 
@@ -344,12 +375,9 @@ export class AuthService {
       // Import enhanced email function dynamically to avoid circular imports
       const { sendEnhancedPasswordResetEmail } = await import('../lib/sendEmail');
       await sendEnhancedPasswordResetEmail(email, user.name, otp, this.env);
-      console.log(`✅ Enhanced password reset email sent to ${email}`);
     } catch (error) {
-      console.error('❌ Failed to send enhanced password reset email:', error);
       // Fallback to regular email template
       await sendPasswordResetEmail(email, user.name, otp, this.env);
-      console.log(`✅ Fallback password reset email sent to ${email}`);
     }
 
     return {
@@ -544,11 +572,6 @@ export class AuthService {
     await this.redis.setOTP(email, otp);
     await this.redis.setCooldown(email);
 
-    // Development mode: Log OTP for debugging (remove in production)
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`🔍 Development mode: OTP for ${email} is: ${otp}`);
-    }
-
     // Security audit logging
     await securityAudit.logOTPGenerated(email, clientIP);
 
@@ -560,7 +583,6 @@ export class AuthService {
     const userName = registrationData?.name || user?.name || 'User';
 
     // Send email using optimized enhanced template
-    console.log(`🚀 Sending OTP verification email to ${email}...`);
     const emailStart = Date.now();
 
     try {
@@ -569,29 +591,16 @@ export class AuthService {
       await sendEnhancedOTPVerificationEmail(email, userName, otp, this.env);
 
       const emailTime = Date.now() - emailStart;
-      console.log(`✅ Professional EJS OTP email sent to ${email} in ${emailTime}ms`);
     } catch (enhancedError) {
       const emailTime = Date.now() - emailStart;
-      console.warn(
-        `Professional email failed after ${emailTime}ms, using fallback:`,
-        enhancedError
-      );
       await sendOTPVerificationEmail(email, userName, otp, this.env);
     }
 
     try {
       // Security audit logging for successful OTP send
       await securityAudit.logOTPSent(email, clientIP, undefined, 'email');
-
-      console.log(`✅ Enhanced OTP sent to ${email}`);
     } catch (error) {
-      console.error('❌ Failed to send OTP email:', error);
-      // In development, still don't log OTP for security
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`🔍 Development mode: OTP generated for ${email} (check email for code)`);
-      } else {
-        throw new AppError('Failed to send OTP email. Please try again.', 500);
-      }
+      throw new AppError('Failed to send OTP email. Please try again.', 500);
     }
 
     return {

@@ -237,10 +237,12 @@ export const imageUploadTestUtils = {
   },
 
   checkDeletionPrevention: (props: any) => {
+    // eslint-disable-line @typescript-eslint/no-explicit-any
     return props.disabled || props.preventDeletion || props.isFormSubmitting;
   },
 
   checkCleanupCondition: (props: any) => {
+    // eslint-disable-line @typescript-eslint/no-explicit-any
     return (
       !props.preserveOnUnmount &&
       !props.isFormSubmitting &&

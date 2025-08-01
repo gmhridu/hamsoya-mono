@@ -17,8 +17,6 @@ app.post('/', zValidator('json', RegisterSchema), async c => {
 
     return c.json(successResponse(result, 'User registered successfully'), 201);
   } catch (error) {
-    console.error('Registration error:', error);
-
     if (error instanceof AppError) {
       return c.json(
         errorResponse(error.message, undefined, error.statusCode),

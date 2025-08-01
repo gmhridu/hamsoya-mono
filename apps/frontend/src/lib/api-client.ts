@@ -1,4 +1,5 @@
 // Simple API client for making requests to the Next.js API routes
+
 const API_BASE_URL = '/api';
 
 // Custom error class for API errors
@@ -79,17 +80,98 @@ function getUserFriendlyErrorMessage(status: number, errorData: any): string {
 
 class ApiClient {
   private baseUrl: string;
+  private refreshPromise: Promise<boolean> | null = null;
 
   constructor(baseUrl: string = API_BASE_URL) {
     this.baseUrl = baseUrl;
   }
 
+  private getAccessToken(): string | null {
+    if (typeof document === 'undefined') {
+      return null;
+    }
+
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; accessToken=`);
+
+    if (parts.length === 2) {
+      const cookieValue = parts.pop()?.split(';').shift();
+
+      // Check if token is expired and clean it up
+      if (cookieValue) {
+        try {
+          const payload = JSON.parse(atob(cookieValue.split('.')[1]));
+          const now = Math.floor(Date.now() / 1000);
+
+          // If token is expired, remove it and return null
+          if (payload.exp && payload.exp < now) {
+            // Use enhanced cookie deletion
+            this.deleteAccessTokenCookie();
+            return null;
+          }
+        } catch (error) {
+          // If token is malformed, remove it
+          this.deleteAccessTokenCookie();
+          return null;
+        }
+      }
+
+      return cookieValue || null;
+    }
+
+    return null;
+  }
+
+  /**
+   * Enhanced cookie deletion for access tokens
+   */
+  private deleteAccessTokenCookie(): void {
+    if (typeof document === 'undefined') return;
+
+    const isSecure = window.location.protocol === 'https:' || process.env.NODE_ENV === 'production';
+    const secureAttr = isSecure ? '; Secure' : '';
+
+    // Try multiple deletion approaches for maximum compatibility
+    document.cookie = `accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Strict${secureAttr}`;
+    document.cookie = `accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/${secureAttr}`;
+    document.cookie = `accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax${secureAttr}`;
+  }
+
+  private async refreshTokens(): Promise<boolean> {
+    if (this.refreshPromise) {
+      return this.refreshPromise;
+    }
+
+    this.refreshPromise = this.performTokenRefresh();
+    const result = await this.refreshPromise;
+    this.refreshPromise = null;
+    return result;
+  }
+
+  private async performTokenRefresh(): Promise<boolean> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/auth/refresh-token`, {
+        method: 'POST',
+        credentials: 'same-origin',
+      });
+
+      return response.ok;
+    } catch (error) {
+      console.error('Token refresh failed:', error);
+      return false;
+    }
+  }
+
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
+
+    // Get access token from cookie for Authorization header
+    const accessToken = this.getAccessToken();
 
     const config: RequestInit = {
       headers: {
         'Content-Type': 'application/json',
+        ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
         ...options.headers,
       },
       credentials: 'same-origin', // Include cookies for same-origin requests
@@ -98,6 +180,57 @@ class ApiClient {
 
     try {
       const response = await fetch(url, config);
+
+      // Handle 401 errors with automatic token refresh
+      if (
+        response.status === 401 &&
+        !endpoint.includes('/auth/refresh-token') &&
+        !endpoint.includes('/auth/login')
+      ) {
+        const refreshSuccess = await this.refreshTokens();
+
+        if (refreshSuccess) {
+          // Update config with new access token for retry
+          const newAccessToken = this.getAccessToken();
+          const retryConfig = {
+            ...config,
+            headers: {
+              ...config.headers,
+              ...(newAccessToken && { Authorization: `Bearer ${newAccessToken}` }),
+            },
+          };
+
+          // Retry original request after successful token refresh
+          const retryResponse = await fetch(url, retryConfig);
+
+          if (retryResponse.ok) {
+            return await retryResponse.json();
+          }
+
+          // If retry still fails, handle the error
+          const errorData = await retryResponse.json().catch(() => ({}));
+          const userFriendlyMessage = getUserFriendlyErrorMessage(retryResponse.status, errorData);
+
+          throw new ApiError(userFriendlyMessage, {
+            statusCode: retryResponse.status,
+            errorCode: errorData.errorCode || errorData.details?.errorCode,
+            userFriendly: true,
+          });
+        } else {
+          // Refresh failed, user needs to login again
+          if (typeof window !== 'undefined') {
+            const { authStore } = await import('@/store/auth-store');
+            authStore.logout();
+            window.location.href = '/login';
+          }
+
+          throw new ApiError('Session expired. Please login again.', {
+            statusCode: 401,
+            errorCode: 'SESSION_EXPIRED',
+            userFriendly: true,
+          });
+        }
+      }
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -249,6 +382,10 @@ class ApiClient {
 
   async logout() {
     return this.post('/auth/logout');
+  }
+
+  async refreshToken() {
+    return this.post('/auth/refresh-token');
   }
 
   async getCurrentUser() {

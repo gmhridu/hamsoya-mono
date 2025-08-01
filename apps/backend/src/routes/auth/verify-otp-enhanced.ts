@@ -40,8 +40,6 @@ app.post('/', zValidator('json', VerifyOTPSchema), async c => {
 
     return c.json(successResponse(result, 'OTP verified successfully'), 200);
   } catch (error) {
-    console.error('OTP verification error:', error);
-
     if (error instanceof AppError) {
       let statusCode = error.statusCode;
       let errorCode = 'VERIFICATION_FAILED';

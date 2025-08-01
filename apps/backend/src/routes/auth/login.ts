@@ -21,22 +21,24 @@ app.post('/', zValidator('json', LoginSchema), async c => {
 
     const result = await authService.login(input);
 
-    // Set secure HTTP-only cookies
+    // Set secure cookies (hybrid approach)
     const isProduction = c.env?.NODE_ENV === 'production' || process.env.NODE_ENV === 'production';
 
+    // Access token: JavaScript-accessible for API calls
     setCookie(c, 'accessToken', result.accessToken, {
-      httpOnly: true,
+      httpOnly: false, // Allow JavaScript access
       secure: isProduction,
       sameSite: 'Strict',
-      maxAge: 15 * 60, // 15 minutes
+      maxAge: 5 * 60, // 5 minutes = 300 seconds
       path: '/',
     });
 
+    // Refresh token: Keep httpOnly for security
     setCookie(c, 'refreshToken', result.refreshToken, {
-      httpOnly: true,
+      httpOnly: true, // Secure, no JavaScript access
       secure: isProduction,
       sameSite: 'Strict',
-      maxAge: 7 * 24 * 60 * 60, // 7 days
+      maxAge: 30 * 24 * 60 * 60, // 30 days = 2,592,000 seconds
       path: '/',
     });
 
@@ -48,8 +50,6 @@ app.post('/', zValidator('json', LoginSchema), async c => {
       200
     );
   } catch (error) {
-    console.error('Login error:', error);
-
     if (error instanceof Error) {
       return c.json(errorResponse(error.message), 401);
     }

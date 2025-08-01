@@ -9,10 +9,11 @@ import { Price } from '@/components/ui/price';
 import { Rating } from '@/components/ui/rating';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
-import { useBookmarksStore, useCartStore } from '@/store';
+import { useAuthStore, useBookmarksStore, useCartStore } from '@/store';
 import { Product, Review } from '@/types';
 import { Heart, Minus, Plus, RotateCcw, Share2, Shield, ShoppingCart, Truck } from 'lucide-react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -40,10 +41,13 @@ export function ProductDetailClient({
     return () => clearTimeout(timer);
   }, []);
 
+  const router = useRouter();
+  const { isAuthenticated } = useAuthStore();
   const { addItem, isInCart, getItemQuantity } = useCartStore();
   const { toggleBookmark, isBookmarked } = useBookmarksStore();
 
-  const isProductBookmarked = isBookmarked(product.id);
+  // For guest users, always show "not bookmarked" state to prevent hydration mismatches
+  const isProductBookmarked = isAuthenticated ? isBookmarked(product.id) : false;
   const isProductInCart = isInCart(product.id);
   const cartQuantity = getItemQuantity(product.id);
 
@@ -63,6 +67,14 @@ export function ProductDetailClient({
   };
 
   const handleToggleBookmark = () => {
+    // Check if user is authenticated
+    if (!isAuthenticated) {
+      // Redirect guest users to login immediately
+      router.push('/login');
+      return;
+    }
+
+    // Only process bookmark for authenticated users
     toggleBookmark(product);
     toast.success(isProductBookmarked ? 'Removed from bookmarks' : 'Added to bookmarks');
   };
@@ -122,6 +134,7 @@ export function ProductDetailClient({
               src={product.images[selectedImageIndex]}
               alt={product.name}
               fill
+              sizes="(max-width: 768px) 100vw, 50vw"
               className="object-cover"
               priority
             />
@@ -177,6 +190,7 @@ export function ProductDetailClient({
                     src={image}
                     alt={`${product.name} ${index + 1}`}
                     fill
+                    sizes="80px"
                     className="object-cover"
                   />
                 </button>

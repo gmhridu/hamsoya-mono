@@ -1,10 +1,10 @@
 'use client';
 
-import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
+import { AlertTriangle, Home, RefreshCw } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import React from 'react';
 
 interface ErrorBoundaryState {
   hasError: boolean;
@@ -41,9 +41,7 @@ function DefaultErrorFallback({ error, resetError, goHome }: ErrorFallbackProps)
         <CardContent className="space-y-4">
           {process.env.NODE_ENV === 'development' && error && (
             <div className="rounded-md bg-red-50 dark:bg-red-900/20 p-3">
-              <p className="text-sm font-medium text-red-800 dark:text-red-200">
-                Error Details:
-              </p>
+              <p className="text-sm font-medium text-red-800 dark:text-red-200">Error Details:</p>
               <p className="mt-1 text-sm text-red-700 dark:text-red-300 font-mono">
                 {error.message}
               </p>
@@ -81,10 +79,10 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error('Error caught by boundary:', error, errorInfo);
-    
+
     // Call the onError callback if provided
     this.props.onError?.(error, errorInfo);
-    
+
     this.setState({
       error,
       errorInfo,
@@ -98,13 +96,15 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
   render() {
     if (this.state.hasError) {
       const FallbackComponent = this.props.fallback || DefaultErrorFallback;
-      
+
       return (
         <FallbackComponent
           error={this.state.error}
           resetError={this.resetError}
           goHome={() => {
             if (typeof window !== 'undefined') {
+              // For class components, we need to use window.location as a fallback
+              // since we can't use hooks in class components
               window.location.href = '/';
             }
           }}
@@ -119,16 +119,18 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 // Hook for error boundary in functional components
 export function useErrorHandler() {
   const router = useRouter();
-  
+
   return {
     handleError: (error: Error) => {
       console.error('Handled error:', error);
       // You could also send this to an error reporting service
     },
     goHome: () => router.push('/'),
-    refresh: () => window.location.reload(),
+    refresh: () => {
+      router.refresh();
+    },
   };
 }
 
-export { ErrorBoundary, DefaultErrorFallback };
+export { DefaultErrorFallback, ErrorBoundary };
 export type { ErrorBoundaryProps, ErrorFallbackProps };

@@ -13,7 +13,12 @@ export const getRedis = (redisUrl?: string): Redis => {
 
     const options: RedisOptions = {
       maxRetriesPerRequest: 3,
-      lazyConnect: true,
+      lazyConnect: false, // Connect immediately
+      retryDelayOnFailover: 100,
+      enableReadyCheck: true,
+      maxRetriesPerRequest: 3,
+      connectTimeout: 10000,
+      commandTimeout: 5000,
     };
 
     redis = new Redis(url, options);
@@ -24,6 +29,14 @@ export const getRedis = (redisUrl?: string): Redis => {
 
     redis.on('connect', () => {
       console.log('✅ Redis connected successfully');
+    });
+
+    redis.on('ready', () => {
+      console.log('✅ Redis ready for commands');
+    });
+
+    redis.on('reconnecting', () => {
+      console.log('🔄 Redis reconnecting...');
     });
   }
 

@@ -67,7 +67,10 @@ export const ResetPasswordSchema = z.object({
 export interface JWTPayload {
   userId: string;
   email: string;
+  name?: string;
   role: UserRole;
+  profile_image_url?: string;
+  is_verified?: boolean;
   iat?: number;
   exp?: number;
 }

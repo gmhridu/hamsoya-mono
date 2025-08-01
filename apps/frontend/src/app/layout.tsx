@@ -1,9 +1,20 @@
+import { TokenCleanup } from '@/components/auth/token-cleanup';
+import { TokenRefreshInitializer } from '@/components/auth/token-refresh-initializer';
 import { Footer } from '@/components/layout/footer';
 import { Navbar } from '@/components/layout/navbar';
 import { ThemeProvider } from '@/components/layout/theme-provider';
+import { AuthSync } from '@/components/providers/auth-sync';
+import { EnhancedServerStorageProvider } from '@/components/providers/enhanced-server-storage-provider';
+import { ServerAuthProvider } from '@/components/providers/server-auth-provider';
+import { StorageSync } from '@/components/providers/storage-sync';
 import { TRPCProvider } from '@/components/providers/trpc-provider';
+import { ChunkErrorBoundary } from '@/components/ui/chunk-error-boundary';
+import { PageTransition } from '@/components/ui/smooth-transition';
 import { Toaster } from '@/components/ui/sonner';
 import { SEO_DEFAULTS } from '@/lib/constants';
+import { getServerStorageData } from '@/lib/enhanced-server-storage-cache';
+import { getCurrentUserInstant } from '@/lib/server-auth-cache';
+import { StorageSyncInitializer } from '@/lib/unified-storage-sync';
 import type { Metadata } from 'next';
 import { Playfair_Display, PT_Sans } from 'next/font/google';
 import './globals.css';
@@ -27,6 +38,43 @@ export const metadata: Metadata = {
   title: SEO_DEFAULTS.title,
   description: SEO_DEFAULTS.description,
   keywords: SEO_DEFAULTS.keywords,
+
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+    ],
+    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+    other: [
+      {
+        rel: 'icon',
+        url: '/android-chrome-192x192.png',
+        sizes: '192x192',
+        type: 'image/png',
+      },
+      {
+        rel: 'icon',
+        url: '/android-chrome-512x512.png',
+        sizes: '512x512',
+        type: 'image/png',
+      },
+    ],
+  },
+
+  manifest: '/site.webmanifest',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Hamsoya',
+    startupImage: [
+      {
+        url: '/apple-touch-icon.png',
+        media:
+          '(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2)',
+      },
+    ],
+  },
   openGraph: {
     title: SEO_DEFAULTS.title,
     description: SEO_DEFAULTS.description,
@@ -53,33 +101,58 @@ export const metadata: Metadata = {
     },
   },
   verification: {
-    google: 'your-google-verification-code', // Replace with actual verification code
+    google: 'your-google-verification-code',
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const { user, isAuthenticated } = await getCurrentUserInstant();
+
+  const serverStorage = await getServerStorageData();
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${playfairDisplay.variable} ${ptSans.variable} antialiased`}>
-        <TRPCProvider>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
-            <div className="relative flex min-h-screen flex-col">
-              <Navbar />
-              <main className="flex-1">{children}</main>
-              <Footer />
-            </div>
-            <Toaster />
-          </ThemeProvider>
-        </TRPCProvider>
+        <ChunkErrorBoundary>
+          <TRPCProvider>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="system"
+              enableSystem
+              disableTransitionOnChange
+            >
+              <ServerAuthProvider user={user} isAuthenticated={isAuthenticated}>
+                <EnhancedServerStorageProvider
+                  cart={serverStorage.cart}
+                  bookmarks={serverStorage.bookmarks}
+                >
+                  {/* Automatic token cleanup and refresh */}
+                  <TokenCleanup />
+                  <TokenRefreshInitializer />
+                  {/* Authentication state synchronization */}
+                  <AuthSync />
+                  {/* Storage state synchronization */}
+                  <StorageSync />
+                  {/* Storage synchronization for data persistence */}
+                  <StorageSyncInitializer />
+                  <PageTransition>
+                    <div className="relative flex min-h-screen flex-col">
+                      {/* Server-side auth data is now provided via ServerAuthProvider */}
+                      <Navbar />
+                      <main className="flex-1">{children}</main>
+                      <Footer />
+                    </div>
+                  </PageTransition>
+                </EnhancedServerStorageProvider>
+              </ServerAuthProvider>
+              <Toaster />
+            </ThemeProvider>
+          </TRPCProvider>
+        </ChunkErrorBoundary>
       </body>
     </html>
   );

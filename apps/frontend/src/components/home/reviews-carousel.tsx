@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Quote, Star, Verified } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { mockReviews } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
+import { ChevronLeft, ChevronRight, Quote, Star, Verified } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 // Extended mock reviews for carousel
 const extendedReviews = [
@@ -17,7 +17,8 @@ const extendedReviews = [
     productId: 'laccha-shemai',
     userName: 'Nasir Ahmed',
     rating: 5,
-    comment: 'The laccha shemai is absolutely perfect for making traditional desserts. My family loved it!',
+    comment:
+      'The laccha shemai is absolutely perfect for making traditional desserts. My family loved it!',
     createdAt: '2024-01-05',
     verified: true,
   },
@@ -35,7 +36,8 @@ const extendedReviews = [
     productId: 'kalo-jira-flowers-honey',
     userName: 'Dr. Rahman',
     rating: 5,
-    comment: 'As a doctor, I can confirm this honey has excellent medicinal properties. Highly recommended!',
+    comment:
+      'As a doctor, I can confirm this honey has excellent medicinal properties. Highly recommended!',
     createdAt: '2024-01-01',
     verified: true,
   },
@@ -63,39 +65,35 @@ export function ReviewsCarousel() {
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setCurrentIndex((prev) => 
-        (prev + 1) % Math.max(1, extendedReviews.length - itemsPerView + 1)
-      );
+      setCurrentIndex(prev => (prev + 1) % Math.max(1, extendedReviews.length - itemsPerView + 1));
     }, 5000);
 
     return () => clearInterval(timer);
   }, [itemsPerView]);
 
   const nextReview = () => {
-    setCurrentIndex((prev) => 
-      (prev + 1) % Math.max(1, extendedReviews.length - itemsPerView + 1)
-    );
+    setCurrentIndex(prev => (prev + 1) % Math.max(1, extendedReviews.length - itemsPerView + 1));
   };
 
   const prevReview = () => {
-    setCurrentIndex((prev) => 
-      prev === 0 
-        ? Math.max(0, extendedReviews.length - itemsPerView)
-        : prev - 1
+    setCurrentIndex(prev =>
+      prev === 0 ? Math.max(0, extendedReviews.length - itemsPerView) : prev - 1
     );
   };
 
   const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase();
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase();
   };
 
   return (
-    <section className="py-16 bg-background">
+    <section className="py-16">
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-serif font-bold mb-4">
-            What Our Customers Say
-          </h2>
+          <h2 className="text-3xl md:text-4xl font-serif font-bold mb-4">What Our Customers Say</h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Real reviews from satisfied customers who trust our quality and service.
           </p>
@@ -104,13 +102,13 @@ export function ReviewsCarousel() {
         <div className="relative">
           {/* Reviews Container */}
           <div className="overflow-hidden">
-            <div 
+            <div
               className="flex transition-transform duration-500 ease-in-out"
               style={{
                 transform: `translateX(-${currentIndex * (100 / itemsPerView)}%)`,
               }}
             >
-              {extendedReviews.map((review) => (
+              {extendedReviews.map(review => (
                 <div
                   key={review.id}
                   className={cn(
@@ -120,11 +118,11 @@ export function ReviewsCarousel() {
                     itemsPerView === 3 && 'w-1/3'
                   )}
                 >
-                  <Card className="h-full border-0 shadow-lg hover:shadow-xl transition-shadow duration-300">
+                  <Card className="h-full border-0 transition-all duration-300">
                     <CardContent className="p-6">
                       {/* Quote Icon */}
                       <Quote className="h-8 w-8 text-primary/20 mb-4" />
-                      
+
                       {/* Rating */}
                       <div className="flex items-center gap-1 mb-4">
                         {[...Array(5)].map((_, i) => (
@@ -139,12 +137,12 @@ export function ReviewsCarousel() {
                           />
                         ))}
                       </div>
-                      
+
                       {/* Review Text */}
                       <p className="text-muted-foreground mb-6 leading-relaxed">
                         "{review.comment}"
                       </p>
-                      
+
                       {/* Reviewer Info */}
                       <div className="flex items-center gap-3">
                         <Avatar>
@@ -152,7 +150,7 @@ export function ReviewsCarousel() {
                             {getInitials(review.userName)}
                           </AvatarFallback>
                         </Avatar>
-                        
+
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
                             <h4 className="font-semibold">{review.userName}</h4>
@@ -167,7 +165,7 @@ export function ReviewsCarousel() {
                             {new Date(review.createdAt).toLocaleDateString('en-US', {
                               year: 'numeric',
                               month: 'long',
-                              day: 'numeric'
+                              day: 'numeric',
                             })}
                           </p>
                         </div>
@@ -183,16 +181,16 @@ export function ReviewsCarousel() {
           <Button
             variant="outline"
             size="icon"
-            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 bg-background shadow-lg"
+            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 bg-white/90 backdrop-blur-sm"
             onClick={prevReview}
           >
             <ChevronLeft className="h-5 w-5" />
           </Button>
-          
+
           <Button
             variant="outline"
             size="icon"
-            className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 bg-background shadow-lg"
+            className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 bg-white/90 backdrop-blur-sm"
             onClick={nextReview}
           >
             <ChevronRight className="h-5 w-5" />
@@ -201,18 +199,20 @@ export function ReviewsCarousel() {
 
         {/* Indicators */}
         <div className="flex justify-center mt-8 gap-2">
-          {Array.from({ length: Math.max(1, extendedReviews.length - itemsPerView + 1) }).map((_, index) => (
-            <button
-              key={index}
-              className={cn(
-                'w-2 h-2 rounded-full transition-all',
-                index === currentIndex
-                  ? 'bg-primary w-8'
-                  : 'bg-muted-foreground/30 hover:bg-muted-foreground/50'
-              )}
-              onClick={() => setCurrentIndex(index)}
-            />
-          ))}
+          {Array.from({ length: Math.max(1, extendedReviews.length - itemsPerView + 1) }).map(
+            (_, index) => (
+              <button
+                key={index}
+                className={cn(
+                  'w-2 h-2 rounded-full transition-all',
+                  index === currentIndex
+                    ? 'bg-primary w-8'
+                    : 'bg-muted-foreground/30 hover:bg-muted-foreground/50'
+                )}
+                onClick={() => setCurrentIndex(index)}
+              />
+            )
+          )}
         </div>
       </div>
     </section>

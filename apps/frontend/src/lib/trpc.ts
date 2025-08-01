@@ -1,4 +1,4 @@
-import { httpBatchLink, loggerLink } from '@trpc/client';
+import { httpLink, loggerLink } from '@trpc/client';
 import { createTRPCReact } from '@trpc/react-query';
 import { inferRouterInputs, inferRouterOutputs } from '@trpc/server';
 import superjson from 'superjson';
@@ -23,7 +23,7 @@ function getBaseUrl() {
   }
 
   // Fallback for development
-  return 'http://localhost:5000';
+  return 'http://localhost:5001';
 }
 
 // tRPC client configuration for React Query
@@ -35,7 +35,7 @@ export const trpcClientConfig = {
         process.env.NODE_ENV === 'development' ||
         (opts.direction === 'down' && opts.result instanceof Error),
     }),
-    httpBatchLink({
+    httpLink({
       url: `${getBaseUrl()}/trpc`,
       headers() {
         return {

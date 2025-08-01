@@ -1,5 +1,6 @@
 'use client';
 
+import { useAuthenticatedUser } from '@/components/providers/server-auth-provider';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,7 +17,8 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { BANGLADESHI_CITIES } from '@/lib/constants';
-import { useAddressesStore, useAuthStore, useCartStore } from '@/store';
+import { ServerStorageData } from '@/lib/server-storage';
+import { useAddressesStore, useCartStore } from '@/store';
 import { ShippingAddress } from '@/types';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowLeft, CheckCircle, CreditCard, MapPin, User } from 'lucide-react';
@@ -40,13 +42,18 @@ const orderSchema = z.object({
 
 type OrderFormData = z.infer<typeof orderSchema>;
 
-export function OrderClient() {
+interface OrderClientProps {
+  serverStorage?: ServerStorageData;
+}
+
+export function OrderClient({ serverStorage }: OrderClientProps) {
+  // Get user data from centralized server auth context
+  const { user } = useAuthenticatedUser(); // This ensures user is authenticated
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
 
   const { items, getTotalPrice, getTotalItems, clearCart } = useCartStore();
-  const { isAuthenticated, user } = useAuthStore();
   const { addresses, getDefaultAddress, addAddress } = useAddressesStore();
 
   const totalPrice = getTotalPrice();
@@ -78,13 +85,6 @@ export function OrderClient() {
       router.push('/products');
     }
   }, [items.length, router, orderPlaced]);
-
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!isAuthenticated) {
-      router.push('/login?redirect=/order');
-    }
-  }, [isAuthenticated, router]);
 
   const onSubmit = async (data: OrderFormData) => {
     setIsSubmitting(true);
@@ -143,8 +143,8 @@ export function OrderClient() {
     );
   }
 
-  if (!isAuthenticated || items.length === 0) {
-    return null; // Will redirect
+  if (items.length === 0) {
+    return null; // Will redirect to products
   }
 
   return (

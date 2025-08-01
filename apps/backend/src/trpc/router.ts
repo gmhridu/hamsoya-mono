@@ -2,6 +2,8 @@ import { initTRPC, TRPCError } from '@trpc/server';
 import superjson from 'superjson';
 import { z } from 'zod';
 import { AuthService } from '../services/auth.service';
+import { BookmarkService } from '../services/bookmark.service';
+import { CartService } from '../services/cart.service';
 import { ProductService } from '../services/product.service';
 import {
   ForgotPasswordSchema,
@@ -276,6 +278,241 @@ const categoryRouter = router({
   }),
 });
 
+// Cart router
+const cartRouter = router({
+  // Get cart data
+  get: publicProcedure
+    .input(z.object({ sessionId: z.string().optional() }).optional())
+    .query(async ({ input, ctx }) => {
+      const cartService = new CartService(ctx.env);
+      const userId = ctx.auth.user?.id;
+      const sessionId =
+        input?.sessionId || `guest_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+      const cart = await cartService.getCart(userId, sessionId);
+      return {
+        data: cart,
+        count: cart.totalItems,
+      };
+    }),
+
+  // Add item to cart
+  addItem: publicProcedure
+    .input(
+      z.object({
+        product: z.object({
+          id: z.string(),
+          name: z.string(),
+          description: z.string(),
+          price: z.number(),
+          originalPrice: z.number().optional(),
+          images: z.array(z.string()),
+          category: z.string(),
+          inStock: z.boolean(),
+          featured: z.boolean().optional(),
+          tags: z.array(z.string()).optional(),
+          weight: z.string().optional(),
+          origin: z.string().optional(),
+          benefits: z.array(z.string()).optional(),
+        }),
+        quantity: z.number().int().positive().default(1),
+        sessionId: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const cartService = new CartService(ctx.env);
+      const userId = ctx.auth.user?.id;
+      return await cartService.addItem(input.product, input.quantity, userId, input.sessionId);
+    }),
+
+  // Remove item from cart
+  removeItem: publicProcedure
+    .input(
+      z.object({
+        productId: z.string(),
+        sessionId: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const cartService = new CartService(ctx.env);
+      const userId = ctx.auth.user?.id;
+      return await cartService.removeItem(input.productId, userId, input.sessionId);
+    }),
+
+  // Update item quantity
+  updateQuantity: publicProcedure
+    .input(
+      z.object({
+        productId: z.string(),
+        quantity: z.number().int().min(0),
+        sessionId: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const cartService = new CartService(ctx.env);
+      const userId = ctx.auth.user?.id;
+      return await cartService.updateQuantity(
+        input.productId,
+        input.quantity,
+        userId,
+        input.sessionId
+      );
+    }),
+
+  // Clear cart
+  clear: publicProcedure
+    .input(z.object({ sessionId: z.string().optional() }))
+    .mutation(async ({ input, ctx }) => {
+      const cartService = new CartService(ctx.env);
+      const userId = ctx.auth.user?.id;
+      return await cartService.clearCart(userId, input.sessionId);
+    }),
+
+  // Get cart count only
+  getCount: publicProcedure
+    .input(z.object({ sessionId: z.string().optional() }).optional())
+    .query(async ({ input, ctx }) => {
+      const cartService = new CartService(ctx.env);
+      const userId = ctx.auth.user?.id;
+      return await cartService.getCartCount(userId, input?.sessionId);
+    }),
+
+  // Migrate guest cart to user cart
+  migrateGuestCart: protectedProcedure
+    .input(z.object({ guestSessionId: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const cartService = new CartService(ctx.env);
+      return await cartService.migrateGuestCart(input.guestSessionId, ctx.auth.user.id);
+    }),
+});
+
+// Bookmark router
+const bookmarkRouter = router({
+  // Get bookmarks
+  get: publicProcedure
+    .input(z.object({ sessionId: z.string().optional() }).optional())
+    .query(async ({ input, ctx }) => {
+      const bookmarkService = new BookmarkService(ctx.env);
+      const userId = ctx.auth.user?.id;
+      const sessionId =
+        input?.sessionId || `guest_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+      const bookmarks = await bookmarkService.getBookmarks(userId, sessionId);
+      return {
+        data: bookmarks,
+        count: bookmarks.bookmarkCount,
+      };
+    }),
+
+  // Add bookmark
+  add: publicProcedure
+    .input(
+      z.object({
+        product: z.object({
+          id: z.string(),
+          name: z.string(),
+          description: z.string(),
+          price: z.number(),
+          originalPrice: z.number().optional(),
+          images: z.array(z.string()),
+          category: z.string(),
+          inStock: z.boolean(),
+          featured: z.boolean().optional(),
+          tags: z.array(z.string()).optional(),
+          weight: z.string().optional(),
+          origin: z.string().optional(),
+          benefits: z.array(z.string()).optional(),
+        }),
+        sessionId: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const bookmarkService = new BookmarkService(ctx.env);
+      const userId = ctx.auth.user?.id;
+      return await bookmarkService.addBookmark(input.product, userId, input.sessionId);
+    }),
+
+  // Remove bookmark
+  remove: publicProcedure
+    .input(
+      z.object({
+        productId: z.string(),
+        sessionId: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const bookmarkService = new BookmarkService(ctx.env);
+      const userId = ctx.auth.user?.id;
+      return await bookmarkService.removeBookmark(input.productId, userId, input.sessionId);
+    }),
+
+  // Toggle bookmark
+  toggle: publicProcedure
+    .input(
+      z.object({
+        product: z.object({
+          id: z.string(),
+          name: z.string(),
+          description: z.string(),
+          price: z.number(),
+          originalPrice: z.number().optional(),
+          images: z.array(z.string()),
+          category: z.string(),
+          inStock: z.boolean(),
+          featured: z.boolean().optional(),
+          tags: z.array(z.string()).optional(),
+          weight: z.string().optional(),
+          origin: z.string().optional(),
+          benefits: z.array(z.string()).optional(),
+        }),
+        sessionId: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const bookmarkService = new BookmarkService(ctx.env);
+      const userId = ctx.auth.user?.id;
+      return await bookmarkService.toggleBookmark(input.product, userId, input.sessionId);
+    }),
+
+  // Clear all bookmarks
+  clear: publicProcedure
+    .input(z.object({ sessionId: z.string().optional() }))
+    .mutation(async ({ input, ctx }) => {
+      const bookmarkService = new BookmarkService(ctx.env);
+      const userId = ctx.auth.user?.id;
+      return await bookmarkService.clearBookmarks(userId, input.sessionId);
+    }),
+
+  // Get bookmark count only
+  getCount: publicProcedure
+    .input(z.object({ sessionId: z.string().optional() }).optional())
+    .query(async ({ input, ctx }) => {
+      const bookmarkService = new BookmarkService(ctx.env);
+      const userId = ctx.auth.user?.id;
+      return await bookmarkService.getBookmarkCount(userId, input?.sessionId);
+    }),
+
+  // Check if product is bookmarked
+  isBookmarked: publicProcedure
+    .input(
+      z.object({
+        productId: z.string(),
+        sessionId: z.string().optional(),
+      })
+    )
+    .query(async ({ input, ctx }) => {
+      const bookmarkService = new BookmarkService(ctx.env);
+      const userId = ctx.auth.user?.id;
+      return await bookmarkService.isBookmarked(input.productId, userId, input.sessionId);
+    }),
+
+  // Migrate guest bookmarks to user bookmarks
+  migrateGuestBookmarks: protectedProcedure
+    .input(z.object({ guestSessionId: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const bookmarkService = new BookmarkService(ctx.env);
+      return await bookmarkService.migrateGuestBookmarks(input.guestSessionId, ctx.auth.user.id);
+    }),
+});
+
 // Main app router
 export const appRouter = router({
   health: healthRouter,
@@ -283,6 +520,8 @@ export const appRouter = router({
   user: userRouter,
   products: productRouter,
   categories: categoryRouter,
+  cart: cartRouter,
+  bookmarks: bookmarkRouter,
 });
 
 export type AppRouter = typeof appRouter;

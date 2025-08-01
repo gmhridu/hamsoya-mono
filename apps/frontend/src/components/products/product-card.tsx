@@ -6,10 +6,12 @@ import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Price } from '@/components/ui/price';
 import { cn } from '@/lib/utils';
 import { useBookmarksStore, useCartStore } from '@/store';
+import { useAuthStore } from '@/store/auth-store';
 import { Product } from '@/types';
 import { Heart, ShoppingCart, Star } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
 interface ProductCardProps {
@@ -18,10 +20,13 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product, className }: ProductCardProps) {
+  const router = useRouter();
+  const { isAuthenticated } = useAuthStore();
   const { addItem, isInCart, getItemQuantity } = useCartStore();
   const { toggleBookmark, isBookmarked } = useBookmarksStore();
 
-  const isProductBookmarked = isBookmarked(product.id);
+  // For guest users, always show "not bookmarked" state to prevent hydration mismatches
+  const isProductBookmarked = isAuthenticated ? isBookmarked(product.id) : false;
   const isProductInCart = isInCart(product.id);
   const cartQuantity = getItemQuantity(product.id);
 
@@ -45,6 +50,14 @@ export function ProductCard({ product, className }: ProductCardProps) {
     e.preventDefault();
     e.stopPropagation();
 
+    // Check if user is authenticated
+    if (!isAuthenticated) {
+      // Redirect guest users to login immediately
+      router.push('/login');
+      return;
+    }
+
+    // Only process bookmark for authenticated users
     toggleBookmark(product);
     toast.success(isProductBookmarked ? 'Removed from bookmarks' : 'Added to bookmarks');
   };
@@ -68,6 +81,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
                 src={product.images[0]}
                 alt={product.name}
                 fill
+                sizes="240px"
                 priority
                 className="object-center transition-transform duration-300 group-hover:scale-105"
               />
@@ -102,9 +116,11 @@ export function ProductCard({ product, className }: ProductCardProps) {
             </div>
 
             {/* Bookmark button */}
-            <button
+            <Button
+              variant="ghost"
+              size={'icon'}
               onClick={handleToggleBookmark}
-              className="absolute top-4 right-4 p-1.5 rounded-full bg-white/90 backdrop-blur-sm shadow-md hover:bg-white transition-all duration-300 hover:scale-110"
+              className="transition-all duration-300 hover:scale-110"
             >
               <Heart
                 className={cn(
@@ -114,7 +130,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
                     : 'text-gray-600 hover:text-red-500'
                 )}
               />
-            </button>
+            </Button>
           </div>
 
           {/* Content section */}
@@ -191,7 +207,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
                     )}
                   />
                 ))}
-                <span className="text-xs text-muted-foreground ml-1.5 font-medium">(4.0)</span>
+                <span className="text-xs text-muted-foreground ml-1.5 font-medium">(5.0)</span>
               </div>
 
               {/* Price */}
@@ -216,7 +232,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
                 <Button
                   onClick={handleAddToCart}
                   disabled={!product.inStock}
-                  className="h-9 font-medium transition-all duration-300 text-sm px-6"
+                  className="h-9 font-medium transition-all duration-300 text-sm px-6 cursor-pointer"
                   variant={isProductInCart ? 'outline' : 'default'}
                 >
                   <ShoppingCart className="mr-2 h-4 w-4" />
@@ -250,6 +266,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
                 src={product.images[0]}
                 alt={product.name}
                 fill
+                sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
                 priority
                 className="object-cover object-center transition-transform duration-300 group-hover:scale-105"
               />
@@ -288,7 +305,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
 
             {/* Bookmark Button */}
             <Button
-              variant="outline"
+              variant="ghost"
               size="icon"
               className={cn(
                 'absolute top-3 right-3 h-9 w-9 opacity-0 group-hover:opacity-100 transition-all duration-300 border-2 shadow-md',

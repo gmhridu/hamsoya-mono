@@ -1,5 +1,6 @@
 'use client';
 import { ProductCard } from '@/components/products/product-card';
+import { useServerAuth } from '@/components/providers/server-auth-provider';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -23,7 +24,13 @@ import { Grid, List, Search } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { JSX, useMemo, useState } from 'react';
 
+interface ProductsClientProps {
+  // No props needed - user data comes from ServerAuthProvider
+}
+
 export function ProductsClient(): JSX.Element {
+  // Get user data from centralized server auth context
+  const { user, isAuthenticated } = useServerAuth();
   const searchParams = useSearchParams();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 

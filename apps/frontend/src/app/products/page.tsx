@@ -1,32 +1,41 @@
+/**
+ * Products Page - App Router
+ * Server-side rendered products listing with instant cart and bookmark data hydration
+ * No loading states or client-side flashing
+ */
+
 import { ProductsClient } from '@/components/products/products-client';
-import { Metadata } from 'next';
+import { BRAND_NAME } from '@/lib/constants';
+import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Products - Hamsoya | Premium Organic Food Products',
+  title: `Products - ${BRAND_NAME} | Premium Organic Food Products`,
   description:
-    'Browse our premium collection of organic and natural food products including pure ghee, natural honey, spices, and traditional foods. Free delivery across Bangladesh.',
+    'Browse our collection of premium organic food products including pure ghee, natural honey, spices, and traditional foods. Fresh delivery across Bangladesh.',
   keywords:
-    'organic food products, pure ghee, natural honey, spices, traditional food, online grocery, bangladesh',
+    'organic products, pure ghee, natural honey, spices, traditional food, Bangladesh, online grocery, premium quality',
   openGraph: {
-    title: 'Products - Hamsoya | Premium Organic Food Products',
+    title: `Products - ${BRAND_NAME}`,
     description:
-      'Browse our premium collection of organic and natural food products including pure ghee, natural honey, spices, and traditional foods.',
+      'Browse our collection of premium organic food products including pure ghee, natural honey, spices, and traditional foods.',
     type: 'website',
+    url: 'https://hamsoya.com/products',
+  },
+  alternates: {
+    canonical: 'https://hamsoya.com/products',
   },
 };
 
+/**
+ * Products page with centralized authentication
+ * User data provided by ServerAuthProvider - zero API calls, zero loading states
+ */
 export default function ProductsPage() {
-  return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl md:text-4xl font-serif font-bold mb-4">Our Products</h1>
-        <p className="text-lg text-muted-foreground">
-          Discover our premium collection of organic and natural products
-        </p>
-      </div>
+  // User data is provided by ServerAuthProvider in layout.tsx
+  // No API calls needed - instant authentication state available via useServerAuth()
 
-      {/* Client Component for interactive functionality */}
+  return (
+    <div className="min-h-screen">
       <ProductsClient />
     </div>
   );

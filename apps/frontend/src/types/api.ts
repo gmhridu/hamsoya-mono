@@ -132,30 +132,30 @@ export interface AppRouter {
         sortOrder?: 'asc' | 'desc';
         limit?: number;
         offset?: number;
-      }) => any[];
+      }) => unknown[]; // eslint-disable-line @typescript-eslint/no-explicit-any
     };
     byId: {
-      query: (input: { id: string }) => any;
+      query: (input: { id: string }) => unknown; // eslint-disable-line @typescript-eslint/no-explicit-any
     };
     featured: {
-      query: (input?: { limit?: number }) => any[];
+      query: (input?: { limit?: number }) => unknown[]; // eslint-disable-line @typescript-eslint/no-explicit-any
     };
     byCategory: {
-      query: (input: { categorySlug: string; limit?: number }) => any[];
+      query: (input: { categorySlug: string; limit?: number }) => unknown[]; // eslint-disable-line @typescript-eslint/no-explicit-any
     };
     search: {
-      query: (input: { query: string; limit?: number }) => any[];
+      query: (input: { query: string; limit?: number }) => unknown[]; // eslint-disable-line @typescript-eslint/no-explicit-any
     };
     reviews: {
-      query: (input: { productId: string }) => any[];
+      query: (input: { productId: string }) => unknown[]; // eslint-disable-line @typescript-eslint/no-explicit-any
     };
   };
   categories: {
     list: {
-      query: () => any[];
+      query: () => unknown[]; // eslint-disable-line @typescript-eslint/no-explicit-any
     };
     bySlug: {
-      query: (input: { slug: string }) => any;
+      query: (input: { slug: string }) => unknown; // eslint-disable-line @typescript-eslint/no-explicit-any
     };
   };
 }

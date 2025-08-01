@@ -3,8 +3,8 @@ import type { JWTPayload } from '../types/auth';
 
 // JWT configuration
 export const JWT_CONFIG = {
-  ACCESS_TOKEN_EXPIRY: '15m', // 15 minutes
-  REFRESH_TOKEN_EXPIRY: '7d', // 7 days
+  ACCESS_TOKEN_EXPIRY: '5m', // 5 minutes
+  REFRESH_TOKEN_EXPIRY: '30d', // 30 days
   ALGORITHM: 'HS256' as const,
 };
 
@@ -62,7 +62,10 @@ export const verifyAccessToken = (token: string, env?: any): JWTPayload => {
     return {
       userId: decoded.userId,
       email: decoded.email,
+      name: decoded.name,
       role: decoded.role,
+      profile_image_url: decoded.profile_image_url,
+      is_verified: decoded.is_verified,
       iat: decoded.iat,
       exp: decoded.exp,
     };
@@ -89,7 +92,10 @@ export const verifyRefreshToken = (token: string, env?: any): JWTPayload => {
     return {
       userId: decoded.userId,
       email: decoded.email,
+      name: decoded.name,
       role: decoded.role,
+      profile_image_url: decoded.profile_image_url,
+      is_verified: decoded.is_verified,
       iat: decoded.iat,
       exp: decoded.exp,
     };

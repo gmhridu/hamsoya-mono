@@ -17,10 +17,16 @@ import { useCartStore } from '@/store';
 import { Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
-export function CartDrawer() {
+interface CartDrawerProps {
+  initialCartCount?: number;
+}
+
+export function CartDrawer({ initialCartCount = 0 }: CartDrawerProps) {
   const [isHydrated, setIsHydrated] = useState(false);
+  const router = useRouter();
   const {
     items,
     isOpen,
@@ -30,6 +36,7 @@ export function CartDrawer() {
     removeItem,
     getTotalItems,
     getTotalPrice,
+    isHydrated: storeIsHydrated,
   } = useCartStore();
 
   // Use md breakpoint (768px) for desktop vs mobile behavior
@@ -40,8 +47,10 @@ export function CartDrawer() {
     setIsHydrated(true);
   }, []);
 
-  const totalItems = isHydrated ? getTotalItems() : 0;
-  const totalPrice = isHydrated ? getTotalPrice() : 0;
+  // Use store hydration state combined with component hydration state
+  const isFullyHydrated = isHydrated && storeIsHydrated;
+  const totalItems = isFullyHydrated ? getTotalItems() : 0;
+  const totalPrice = isFullyHydrated ? getTotalPrice() : 0;
 
   // Handle cart open/close state changes
   const handleOpenChange = (open: boolean) => {
@@ -55,7 +64,7 @@ export function CartDrawer() {
   const CartContent = () => (
     <div className="flex h-full flex-col">
       <div className="flex-1 overflow-y-auto">
-        {!isHydrated || items.length === 0 ? (
+        {!isFullyHydrated || items.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center text-center p-6">
             <div className="w-20 h-20 rounded-full bg-muted/50 flex items-center justify-center mb-4">
               <ShoppingBag className="h-10 w-10 text-muted-foreground" />
@@ -169,12 +178,14 @@ export function CartDrawer() {
           </div>
 
           <Button
-            asChild
             className="w-full transition-all duration-200"
             size="lg"
-            onClick={closeCart}
+            onClick={() => {
+              closeCart();
+              router.push('/order');
+            }}
           >
-            <Link href="/order">Proceed to Checkout</Link>
+            Proceed to Checkout
           </Button>
 
           <p className="text-xs text-center text-muted-foreground">
@@ -186,16 +197,14 @@ export function CartDrawer() {
   );
 
   const trigger = (
-    <Button variant="outline" size="icon" className="relative">
-      <ShoppingBag className="h-5 w-5" />
-      {isHydrated && totalItems > 0 && (
-        <Badge
-          variant="destructive"
-          className="absolute -right-2 -top-2 h-5 w-5 rounded-full p-0 text-xs font-semibold text-white flex items-center justify-center min-w-[1.25rem] min-h-[1.25rem]"
-        >
-          {totalItems}
-        </Badge>
-      )}
+    <Button variant="ghost" size="icon" className="relative hover:bg-accent cursor-pointer">
+      <ShoppingBag className="h-5 w-5 cursor-pointer" />
+      <Badge
+        variant="destructive"
+        className="absolute -right-1 -top-1 h-4 w-4 rounded-full p-0 text-xs font-semibold text-white flex items-center justify-center min-w-[1rem] min-h-[1rem]"
+      >
+        {isFullyHydrated ? totalItems || 0 : initialCartCount}
+      </Badge>
     </Button>
   );
 

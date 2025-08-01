@@ -54,7 +54,7 @@ export class EnhancedOTPAPI {
   private baseURL: string;
 
   constructor(baseURL?: string) {
-    this.baseURL = baseURL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+    this.baseURL = baseURL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
   }
 
   private async makeRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {

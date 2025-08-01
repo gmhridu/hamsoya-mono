@@ -7,35 +7,29 @@ import { Label } from '@/components/ui/label';
 import { ProfileImageUpload } from '@/components/ui/profile-image-upload';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useAuth } from '@/hooks/use-auth';
+import { useRegister } from '@/hooks/use-auth';
+import { useLogin } from '@/hooks/useLogin';
 import { BRAND_NAME } from '@/lib/constants';
-import { useAuthStore } from '@/store';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Eye, EyeOff, Loader, Lock, Mail, Phone, User } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import * as z from 'zod';
+import { z } from 'zod';
 
-const loginSchema = z.object({
+// Form schemas
+const LoginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
 });
 
-const registerSchema = z
+const RegisterSchema = z
   .object({
     name: z.string().min(2, 'Name must be at least 2 characters'),
     email: z.string().email('Please enter a valid email address'),
-    phone: z.string().min(11, 'Phone number must be at least 11 digits').optional(),
-    password: z
-      .string()
-      .min(8, 'Password must be at least 8 characters')
-      .regex(
-        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-        'Password must contain at least one lowercase letter, one uppercase letter, and one number'
-      ),
-    confirmPassword: z.string(),
+    password: z.string().min(6, 'Password must be at least 6 characters'),
+    confirmPassword: z.string().min(6, 'Password must be at least 6 characters'),
+    phone_number: z.string().optional(),
     profile_image_url: z.string().optional(),
   })
   .refine(data => data.password === data.confirmPassword, {
@@ -43,72 +37,61 @@ const registerSchema = z
     path: ['confirmPassword'],
   });
 
-type LoginFormData = z.infer<typeof loginSchema>;
-type RegisterFormData = z.infer<typeof registerSchema>;
+type LoginFormData = z.infer<typeof LoginSchema>;
+type RegisterFormData = z.infer<typeof RegisterSchema>;
 
-export function LoginClient() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const redirectTo = searchParams.get('redirect') || '/';
+interface LoginClientProps {
+  redirectTo?: string;
+  serverStorage?: any;
+}
 
+export function LoginClient({}: LoginClientProps = {}) {
   const [activeTab, setActiveTab] = useState('login');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [profileImageUrl, setProfileImageUrl] = useState<string | undefined>(undefined);
   const [profileImageFileId, setProfileImageFileId] = useState<string | undefined>(undefined);
 
-  const { isAuthenticated } = useAuthStore();
-  const { login, register, isLoading } = useAuth();
+  // Use client-side hooks for better UX and proper feedback
+  const loginMutation = useLogin();
+  const registerMutation = useRegister();
 
-  // Redirect if already authenticated
-  useEffect(() => {
-    if (isAuthenticated) {
-      router.push(redirectTo);
-    }
-  }, [isAuthenticated, router, redirectTo]);
-
+  // Login form setup
   const loginForm = useForm<LoginFormData>({
-    resolver: zodResolver(loginSchema),
+    resolver: zodResolver(LoginSchema),
     defaultValues: {
       email: '',
       password: '',
     },
   });
 
+  // Register form setup
   const registerForm = useForm<RegisterFormData>({
-    resolver: zodResolver(registerSchema),
+    resolver: zodResolver(RegisterSchema),
     defaultValues: {
       name: '',
       email: '',
-      phone: '',
       password: '',
       confirmPassword: '',
-      profile_image_url: undefined,
+      phone_number: '',
+      profile_image_url: '',
     },
   });
 
-  const onLogin = async (data: LoginFormData) => {
-    // The useLogin hook already handles success/error cases with toasts and navigation
-    await login({ email: data.email, password: data.password });
+  // Handle login form submission
+  const onLoginSubmit = (data: LoginFormData) => {
+    loginMutation.login(data);
   };
 
-  const onRegister = async (data: RegisterFormData) => {
-    // Use the profileImageUrl state if available, otherwise use form data
-    const imageUrl = profileImageUrl || data.profile_image_url;
-
-    await register({
-      name: data.name,
-      email: data.email,
-      password: data.password,
+  // Handle register form submission
+  const onRegisterSubmit = (data: RegisterFormData) => {
+    const { confirmPassword, ...registerData } = data;
+    registerMutation.mutate({
+      ...registerData,
       role: 'USER' as const,
-      phone_number: data.phone,
-      profile_image_url: imageUrl || undefined,
+      profile_image_url: profileImageUrl,
     });
   };
-
-  if (isAuthenticated) {
-    return null; // Will redirect
-  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted/30 px-4 py-12">
@@ -141,7 +124,7 @@ export function LoginClient() {
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               {/* Login Tab */}
               <TabsContent value="login" className="space-y-0">
-                <form onSubmit={loginForm.handleSubmit(onLogin)} className="space-y-6">
+                <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-6">
                   <div className="space-y-2">
                     <Label htmlFor="login-email" className="text-sm font-medium text-foreground">
                       Email
@@ -157,7 +140,7 @@ export function LoginClient() {
                       />
                     </div>
                     {loginForm.formState.errors.email && (
-                      <p className="text-sm text-destructive mt-1.5">
+                      <p className="text-sm text-red-500">
                         {loginForm.formState.errors.email.message}
                       </p>
                     )}
@@ -191,7 +174,7 @@ export function LoginClient() {
                       </Button>
                     </div>
                     {loginForm.formState.errors.password && (
-                      <p className="text-sm text-destructive mt-1.5">
+                      <p className="text-sm text-red-500">
                         {loginForm.formState.errors.password.message}
                       </p>
                     )}
@@ -199,16 +182,19 @@ export function LoginClient() {
 
                   <Button
                     type="submit"
-                    className="w-full h-11 font-medium transition-all hover:shadow-md cursor-pointer"
-                    disabled={isLoading}
+                    className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-medium transition-colors"
+                    disabled={loginMutation.isLoading}
                   >
-                    {isLoading ? (
+                    {loginMutation.isLoading? (
                       <>
-                        <Loader className="h-4 w-4 animate-spin" />
-                        Signing In...
+                        <Loader className="mr-2 h-4 w-4 animate-spin" />
+                        Signing in...
                       </>
                     ) : (
-                      'Sign In'
+                      <>
+                        <Lock className="mr-2 h-4 w-4" />
+                        Sign In
+                      </>
                     )}
                   </Button>
                 </form>
@@ -216,17 +202,7 @@ export function LoginClient() {
 
               {/* Register Tab */}
               <TabsContent value="register" className="space-y-0">
-                <form
-                  onSubmit={e => {
-                    console.log('📋 Form onSubmit event triggered');
-                    console.log('🔍 Form validation state:', registerForm.formState);
-                    console.log('🔍 Form errors:', registerForm.formState.errors);
-                    registerForm.handleSubmit(onRegister, errors => {
-                      console.log('❌ Form validation failed:', errors);
-                    })(e);
-                  }}
-                  className="space-y-6"
-                >
+                <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-6">
                   <div className="space-y-2">
                     <Label htmlFor="register-name" className="text-sm font-medium text-foreground">
                       Full Name
@@ -235,17 +211,13 @@ export function LoginClient() {
                       <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                       <Input
                         id="register-name"
+                        name="name"
                         type="text"
                         placeholder="Enter your full name"
                         className="pl-10 h-11 transition-colors focus:ring-2 focus:ring-primary/20"
-                        {...registerForm.register('name')}
+                        required
                       />
                     </div>
-                    {registerForm.formState.errors.name && (
-                      <p className="text-sm text-destructive mt-1.5">
-                        {registerForm.formState.errors.name.message}
-                      </p>
-                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -256,17 +228,13 @@ export function LoginClient() {
                       <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                       <Input
                         id="register-email"
+                        name="email"
                         type="email"
                         placeholder="Enter your email"
                         className="pl-10 h-11 transition-colors focus:ring-2 focus:ring-primary/20"
-                        {...registerForm.register('email')}
+                        required
                       />
                     </div>
-                    {registerForm.formState.errors.email && (
-                      <p className="text-sm text-destructive mt-1.5">
-                        {registerForm.formState.errors.email.message}
-                      </p>
-                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -277,17 +245,12 @@ export function LoginClient() {
                       <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                       <Input
                         id="register-phone"
+                        name="phone"
                         type="tel"
                         placeholder="01XXXXXXXXX"
                         className="pl-10 h-11 transition-colors focus:ring-2 focus:ring-primary/20"
-                        {...registerForm.register('phone')}
                       />
                     </div>
-                    {registerForm.formState.errors.phone && (
-                      <p className="text-sm text-destructive mt-1.5">
-                        {registerForm.formState.errors.phone.message}
-                      </p>
-                    )}
                   </div>
 
                   <div className="space-y-3">
@@ -301,24 +264,15 @@ export function LoginClient() {
                         currentImageUrl={profileImageUrl}
                         currentFileId={profileImageFileId}
                         onImageUpload={(url, fileId) => {
-                          console.log('📸 Image uploaded - URL:', url, 'FileID:', fileId);
                           setProfileImageUrl(url);
                           setProfileImageFileId(fileId);
-                          // Update form value as well
-                          registerForm.setValue('profile_image_url', url);
                         }}
                         onImageRemove={() => {
-                          console.log('🗑️ Image remove callback triggered');
                           setProfileImageUrl(undefined);
                           setProfileImageFileId(undefined);
-                          // Update form value as well
-                          registerForm.setValue('profile_image_url', undefined);
                         }}
                         size="lg"
-                        disabled={isLoading}
-                        preventDeletion={isLoading}
                         preserveOnUnmount={true} // Don't delete image when component unmounts
-                        isFormSubmitting={isLoading} // Prevent deletion during form submission
                       />
                     </div>
                   </div>
@@ -334,10 +288,11 @@ export function LoginClient() {
                       <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                       <Input
                         id="register-password"
+                        name="password"
                         type={showPassword ? 'text' : 'password'}
                         placeholder="Create a password"
                         className="pl-10 pr-10 h-11 transition-colors focus:ring-2 focus:ring-primary/20"
-                        {...registerForm.register('password')}
+                        required
                       />
                       <Button
                         type="button"
@@ -353,11 +308,6 @@ export function LoginClient() {
                         )}
                       </Button>
                     </div>
-                    {registerForm.formState.errors.password && (
-                      <p className="text-sm text-destructive mt-1.5">
-                        {registerForm.formState.errors.password.message}
-                      </p>
-                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -371,10 +321,11 @@ export function LoginClient() {
                       <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                       <Input
                         id="register-confirm-password"
+                        name="confirmPassword"
                         type={showConfirmPassword ? 'text' : 'password'}
                         placeholder="Confirm your password"
                         className="pl-10 pr-10 h-11 transition-colors focus:ring-2 focus:ring-primary/20"
-                        {...registerForm.register('confirmPassword')}
+                        required
                       />
                       <Button
                         type="button"
@@ -390,25 +341,23 @@ export function LoginClient() {
                         )}
                       </Button>
                     </div>
-                    {registerForm.formState.errors.confirmPassword && (
-                      <p className="text-sm text-destructive mt-1.5">
-                        {registerForm.formState.errors.confirmPassword.message}
-                      </p>
-                    )}
                   </div>
 
                   <Button
                     type="submit"
-                    className="w-full h-11 font-medium transition-all hover:shadow-md cursor-pointer"
-                    disabled={isLoading}
+                    className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-medium transition-colors"
+                    disabled={registerMutation.isPending}
                   >
-                    {isLoading ? (
+                    {registerMutation.isPending ? (
                       <>
-                        <Loader className="h-4 w-4 animate-spin" />
-                        Creating Account...
+                        <Loader className="mr-2 h-4 w-4 animate-spin" />
+                        Creating account...
                       </>
                     ) : (
-                      'Create Account'
+                      <>
+                        <User className="mr-2 h-4 w-4" />
+                        Create Account
+                      </>
                     )}
                   </Button>
                 </form>

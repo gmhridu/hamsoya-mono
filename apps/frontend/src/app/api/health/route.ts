@@ -4,8 +4,8 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function GET(request: NextRequest) {
   try {
     // Forward the request to the backend
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-    
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
+
     const response = await fetch(`${backendUrl}/api/health`, {
       method: 'GET',
       headers: {
@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     }
 
     const data = await response.json();
-    
+
     return NextResponse.json({
       status: 'healthy',
       timestamp: new Date().toISOString(),
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Health check failed:', error);
-    
+
     return NextResponse.json(
       {
         status: 'unhealthy',
