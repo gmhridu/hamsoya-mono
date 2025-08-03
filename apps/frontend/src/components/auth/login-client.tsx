@@ -94,7 +94,7 @@ export function LoginClient({}: LoginClientProps = {}) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/30 px-4 py-12">
+    <div className="min-h-screen flex items-center justify-center  px-4 py-12">
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
@@ -180,6 +180,16 @@ export function LoginClient({}: LoginClientProps = {}) {
                     )}
                   </div>
 
+                  {/* Forgot Password Link */}
+                  <div className="flex justify-end">
+                    <Link
+                      href="/forgot-password"
+                      className="text-sm text-primary hover:text-primary/80 transition-colors font-medium"
+                    >
+                      Forgot Password?
+                    </Link>
+                  </div>
+
                   <Button
                     type="submit"
                     className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-medium transition-colors"
@@ -211,13 +221,17 @@ export function LoginClient({}: LoginClientProps = {}) {
                       <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                       <Input
                         id="register-name"
-                        name="name"
                         type="text"
                         placeholder="Enter your full name"
                         className="pl-10 h-11 transition-colors focus:ring-2 focus:ring-primary/20"
-                        required
+                        {...registerForm.register('name')}
                       />
                     </div>
+                    {registerForm.formState.errors.name && (
+                      <p className="text-sm text-red-500">
+                        {registerForm.formState.errors.name.message}
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -228,13 +242,17 @@ export function LoginClient({}: LoginClientProps = {}) {
                       <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                       <Input
                         id="register-email"
-                        name="email"
                         type="email"
                         placeholder="Enter your email"
                         className="pl-10 h-11 transition-colors focus:ring-2 focus:ring-primary/20"
-                        required
+                        {...registerForm.register('email')}
                       />
                     </div>
+                    {registerForm.formState.errors.email && (
+                      <p className="text-sm text-red-500">
+                        {registerForm.formState.errors.email.message}
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -245,12 +263,17 @@ export function LoginClient({}: LoginClientProps = {}) {
                       <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                       <Input
                         id="register-phone"
-                        name="phone"
                         type="tel"
                         placeholder="01XXXXXXXXX"
                         className="pl-10 h-11 transition-colors focus:ring-2 focus:ring-primary/20"
+                        {...registerForm.register('phone_number')}
                       />
                     </div>
+                    {registerForm.formState.errors.phone_number && (
+                      <p className="text-sm text-red-500">
+                        {registerForm.formState.errors.phone_number.message}
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-3">
@@ -273,6 +296,7 @@ export function LoginClient({}: LoginClientProps = {}) {
                         }}
                         size="lg"
                         preserveOnUnmount={true} // Don't delete image when component unmounts
+                        isFormSubmitting={registerMutation.isPending} // Prevent deletion during form submission
                       />
                     </div>
                   </div>
@@ -288,11 +312,10 @@ export function LoginClient({}: LoginClientProps = {}) {
                       <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                       <Input
                         id="register-password"
-                        name="password"
                         type={showPassword ? 'text' : 'password'}
                         placeholder="Create a password"
                         className="pl-10 pr-10 h-11 transition-colors focus:ring-2 focus:ring-primary/20"
-                        required
+                        {...registerForm.register('password')}
                       />
                       <Button
                         type="button"
@@ -308,6 +331,11 @@ export function LoginClient({}: LoginClientProps = {}) {
                         )}
                       </Button>
                     </div>
+                    {registerForm.formState.errors.password && (
+                      <p className="text-sm text-red-500">
+                        {registerForm.formState.errors.password.message}
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -321,11 +349,10 @@ export function LoginClient({}: LoginClientProps = {}) {
                       <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                       <Input
                         id="register-confirm-password"
-                        name="confirmPassword"
                         type={showConfirmPassword ? 'text' : 'password'}
                         placeholder="Confirm your password"
                         className="pl-10 pr-10 h-11 transition-colors focus:ring-2 focus:ring-primary/20"
-                        required
+                        {...registerForm.register('confirmPassword')}
                       />
                       <Button
                         type="button"
@@ -341,6 +368,11 @@ export function LoginClient({}: LoginClientProps = {}) {
                         )}
                       </Button>
                     </div>
+                    {registerForm.formState.errors.confirmPassword && (
+                      <p className="text-sm text-red-500">
+                        {registerForm.formState.errors.confirmPassword.message}
+                      </p>
+                    )}
                   </div>
 
                   <Button

@@ -122,6 +122,22 @@ export class RedisService {
     await this.redis.del(key);
   }
 
+  // Password Reset OTP Management
+  async setPasswordResetOTP(email: string, otp: string): Promise<void> {
+    const key = RedisKeys.passwordResetOtp(email);
+    await this.redis.setex(key, OTP_LIMITS.OTP_EXPIRY_MINUTES * 60, otp);
+  }
+
+  async getPasswordResetOTP(email: string): Promise<string | null> {
+    const key = RedisKeys.passwordResetOtp(email);
+    return await this.redis.get(key);
+  }
+
+  async deletePasswordResetOTP(email: string): Promise<void> {
+    const key = RedisKeys.passwordResetOtp(email);
+    await this.redis.del(key);
+  }
+
   // Cooldown Management
   async setCooldown(email: string, type: 'otp' | 'password_reset' = 'otp'): Promise<void> {
     const key =

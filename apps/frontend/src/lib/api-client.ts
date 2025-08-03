@@ -60,7 +60,7 @@ function getUserFriendlyErrorMessage(status: number, errorData: any): string {
     case 403:
       return "You don't have permission to perform this action.";
     case 404:
-      return 'The requested resource was not found. Please try again later.';
+      return 'This email address is not registered. Please check your email or create a new account.';
     case 409:
       return 'This action conflicts with existing data. Please refresh and try again.';
     case 422:
@@ -400,6 +400,27 @@ class ApiClient {
     return this.post('/auth/resend-verification', { email });
   }
 
+  // Forgot Password API methods
+  async forgotPassword(email: string) {
+    return this.post('/auth/forgot-password', { email });
+  }
+
+  async verifyForgotPasswordOTP(email: string, otp: string) {
+    return this.post('/auth/verify-forgot-password', { email, otp });
+  }
+
+  async verifyForgotPasswordOTPEnhanced(email: string, otp: string) {
+    return this.post('/auth/verify-forgot-password-enhanced', { email, otp });
+  }
+
+  async checkPasswordResetVerification(email: string) {
+    return this.post('/auth/check-password-reset-verification', { email });
+  }
+
+  async resetPassword(email: string, password: string) {
+    return this.post('/auth/reset-password', { email, password });
+  }
+
   async getCooldownStatus(email: string) {
     return this.get(`/auth/cooldown-status?email=${encodeURIComponent(email)}`);
   }
@@ -407,14 +428,6 @@ class ApiClient {
   // Backward compatibility method using POST
   async getCooldownStatusPost(email: string) {
     return this.post('/auth/cooldown-status', { email });
-  }
-
-  async forgotPassword(email: string) {
-    return this.post('/auth/forgot-password', { email });
-  }
-
-  async resetPassword(email: string, password: string) {
-    return this.post('/auth/reset-password', { email, password });
   }
 }
 

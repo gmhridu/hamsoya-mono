@@ -131,8 +131,8 @@ export function EnhancedOTPVerification({
 
   // Initialize cooldown from server data
   useEffect(() => {
-    if (cooldownData?.data?.cooldownRemaining && cooldownData.data.cooldownRemaining > 0) {
-      setResendCooldown(cooldownData.data.cooldownRemaining);
+    if (cooldownData?.cooldownRemaining && cooldownData.cooldownRemaining > 0) {
+      setResendCooldown(cooldownData.cooldownRemaining);
     }
   }, [cooldownData]);
 
@@ -180,7 +180,7 @@ export function EnhancedOTPVerification({
     console.error('OTP verification error:', error);
 
     let errorCode = 'VERIFICATION_FAILED';
-    let errorInfo = OTP_ERROR_MESSAGES.VERIFICATION_FAILED;
+    let errorInfo: any = OTP_ERROR_MESSAGES.VERIFICATION_FAILED;
 
     // Reset previous error state
     setRemainingAttempts(null);
@@ -192,9 +192,8 @@ export function EnhancedOTPVerification({
 
       if (errorData.errorCode) {
         errorCode = errorData.errorCode;
-        errorInfo =
-          OTP_ERROR_MESSAGES[errorCode as keyof typeof OTP_ERROR_MESSAGES] ||
-          OTP_ERROR_MESSAGES.VERIFICATION_FAILED;
+        const errorMessage = OTP_ERROR_MESSAGES[errorCode as keyof typeof OTP_ERROR_MESSAGES];
+        errorInfo = errorMessage || OTP_ERROR_MESSAGES.VERIFICATION_FAILED;
       }
 
       // Extract structured error data

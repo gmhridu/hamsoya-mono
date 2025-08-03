@@ -1,11 +1,12 @@
 import { apiClient } from '@/lib/api-client';
 import { getUserFriendlyMessage } from '@/lib/error-messages';
 import { queryClient, queryKeys } from '@/lib/query-client';
+import { toastService } from '@/lib/toast-service';
 import { useAuthActions, useAuthStore } from '@/store/auth-store';
 import { AUTH_CONFIG, AUTH_QUERY_KEYS } from '@/types/auth';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { toast } from 'sonner';
 
 // Hook for user registration
@@ -91,6 +92,7 @@ export function useLogin() {
 export function useLogout() {
   const router = useRouter();
   const { logout } = useAuthActions();
+  const loadingToastRef = useRef<string | number | null>(null);
 
   const handleLogoutCleanup = () => {
     // Clear auth state
@@ -128,16 +130,36 @@ export function useLogout() {
   };
 
   return useMutation({
-    mutationFn: () => apiClient.logout(),
+    mutationFn: () => {
+      // Show loading toast
+      loadingToastRef.current = toastService.auth.signingOut();
+      return apiClient.logout();
+    },
     onSuccess: () => {
       handleLogoutCleanup();
-      toast.success('Logged out successfully');
+
+      // Update loading toast to success
+      if (loadingToastRef.current) {
+        toastService.auth.logoutSuccess(loadingToastRef.current);
+        loadingToastRef.current = null;
+      } else {
+        toastService.auth.logoutSuccess();
+      }
+
       router.push('/');
     },
     onError: () => {
       // Even if logout fails on server, clear local state
       handleLogoutCleanup();
-      toast.success('Logged out successfully');
+
+      // Update loading toast to success (logout always succeeds locally)
+      if (loadingToastRef.current) {
+        toastService.auth.logoutSuccess(loadingToastRef.current);
+        loadingToastRef.current = null;
+      } else {
+        toastService.auth.logoutSuccess();
+      }
+
       router.push('/');
     },
   });
@@ -239,6 +261,28 @@ export function useForgotPassword() {
         getUserFriendlyMessage(error) || 'Failed to send password reset email. Please try again.';
       setError(errorMessage);
       toast.error(errorMessage);
+    },
+  });
+}
+
+// Hook for verifying forgot password OTP (enhanced version)
+export function useVerifyForgotPasswordOTP() {
+  const { setLoading, setError, clearError } = useAuthActions();
+
+  return useMutation({
+    mutationFn: async (data: { email: string; otp: string }) => {
+      setLoading(true);
+      clearError();
+      return apiClient.verifyForgotPasswordOTPEnhanced(data.email, data.otp);
+    },
+    onSuccess: () => {
+      setLoading(false);
+    },
+    onError: (error: any) => {
+      setLoading(false);
+      // Don't set global error here - let component handle specific error display
+      console.error('Verify forgot password OTP error:', error);
+      throw error; // Re-throw to let component handle
     },
   });
 }

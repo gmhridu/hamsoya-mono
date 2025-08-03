@@ -20,6 +20,7 @@
     "test:performance": "bun run --filter backend test:performance"
   },
   "devDependencies": {
+    "@playwright/test": "^1.54.2",
     "drizzle-kit": "^0.31.4",
     "tsx": "^4.20.3",
     "typescript": "^5"

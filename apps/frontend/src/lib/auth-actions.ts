@@ -46,10 +46,10 @@ export async function loginAction(formData: FormData) {
     };
 
     const validatedData = LoginSchema.parse(rawData);
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
     // Call backend API
-    const response = await fetch(`${backendUrl}/api/auth/login`, {
+    const response = await fetch(`${backendUrl}/auth/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -120,7 +120,7 @@ export async function loginAction(formData: FormData) {
 
     // Return error state for client to handle
     if (error instanceof z.ZodError) {
-      const fieldErrors = error.errors
+      const fieldErrors = error.issues
         .map(err => `${err.path.join('.')}: ${err.message}`)
         .join(', ');
       throw new Error(`Validation error: ${fieldErrors}`);
@@ -150,10 +150,10 @@ export async function registerAction(formData: FormData) {
     };
 
     const validatedData = RegisterSchema.parse(rawData);
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
     // Call backend API
-    const response = await fetch(`${backendUrl}/api/auth/register`, {
+    const response = await fetch(`${backendUrl}/auth/register`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -188,7 +188,7 @@ export async function registerAction(formData: FormData) {
 
     // Return error state for client to handle
     if (error instanceof z.ZodError) {
-      const fieldErrors = error.errors
+      const fieldErrors = error.issues
         .map(err => `${err.path.join('.')}: ${err.message}`)
         .join(', ');
       throw new Error(`Validation error: ${fieldErrors}`);
@@ -209,7 +209,7 @@ export async function registerAction(formData: FormData) {
 export async function logoutAction() {
   try {
     const cookieStore = await cookies();
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
     // Get tokens from cookies
     const accessToken = cookieStore.get('accessToken')?.value;
@@ -218,7 +218,7 @@ export async function logoutAction() {
     // Call backend logout if we have tokens
     if (accessToken || refreshToken) {
       try {
-        await fetch(`${backendUrl}/api/auth/logout`, {
+        await fetch(`${backendUrl}/auth/logout`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

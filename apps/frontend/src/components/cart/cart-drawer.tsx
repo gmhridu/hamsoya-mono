@@ -13,12 +13,13 @@ import { Price } from '@/components/ui/price';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { cn } from '@/lib/utils';
+import { toastService } from '@/lib/toast-service';
 import { useCartStore } from '@/store';
-import { Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react';
+import { Loader, Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 
 interface CartDrawerProps {
   initialCartCount?: number;
@@ -26,6 +27,8 @@ interface CartDrawerProps {
 
 export function CartDrawer({ initialCartCount = 0 }: CartDrawerProps) {
   const [isHydrated, setIsHydrated] = useState(false);
+  const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
+  const checkoutToastRef = useRef<string | number | null>(null);
   const router = useRouter();
   const {
     items,
@@ -58,6 +61,44 @@ export function CartDrawer({ initialCartCount = 0 }: CartDrawerProps) {
       openCart();
     } else {
       closeCart();
+    }
+  };
+
+  // Handle checkout process with loading states
+  const handleCheckout = async () => {
+    try {
+      setIsCheckoutLoading(true);
+
+      // Show loading toast
+      checkoutToastRef.current = toastService.checkout.processingCheckout();
+
+      // Close cart immediately for better UX
+      closeCart();
+
+      // Navigate to checkout page
+      router.push('/order');
+
+      // Simulate a small delay to show the loading state
+      setTimeout(() => {
+        if (checkoutToastRef.current) {
+          toastService.checkout.checkoutSuccess(checkoutToastRef.current);
+          checkoutToastRef.current = null;
+        }
+        setIsCheckoutLoading(false);
+      }, 1000);
+
+    } catch (error) {
+      // Handle checkout error
+      const errorMessage = error instanceof Error ? error.message : 'Checkout failed';
+
+      if (checkoutToastRef.current) {
+        toastService.checkout.checkoutError(errorMessage, checkoutToastRef.current);
+        checkoutToastRef.current = null;
+      } else {
+        toastService.checkout.checkoutError(errorMessage);
+      }
+
+      setIsCheckoutLoading(false);
     }
   };
 
@@ -123,7 +164,7 @@ export function CartDrawer({ initialCartCount = 0 }: CartDrawerProps) {
                           <Button
                             variant="outline"
                             size="icon"
-                            className="h-8 w-8 transition-all duration-200 hover:bg-destructive/20 hover:border-destructive/40 hover:text-destructive"
+                            className="h-8 w-8 cursor-pointer transition-all duration-200 hover:bg-destructive/20 hover:border-destructive/40 hover:text-destructive"
                             onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
                           >
                             <Minus className="h-3 w-3" />
@@ -136,7 +177,7 @@ export function CartDrawer({ initialCartCount = 0 }: CartDrawerProps) {
                           <Button
                             variant="outline"
                             size="icon"
-                            className="h-8 w-8 transition-all duration-200 hover:bg-primary/20 hover:border-primary/40 hover:text-primary"
+                            className="h-8 w-8 cursor-pointer transition-all duration-200 hover:bg-primary/20 hover:border-primary/40 hover:text-primary"
                             onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
                           >
                             <Plus className="h-3 w-3" />
@@ -146,7 +187,7 @@ export function CartDrawer({ initialCartCount = 0 }: CartDrawerProps) {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/20 transition-all duration-200"
+                          className="h-8 w-8 cursor-pointer text-destructive hover:text-destructive hover:bg-destructive/20 transition-all duration-200"
                           onClick={() => removeItem(item.product.id)}
                         >
                           <Trash2 className="h-4 w-4" />
@@ -178,14 +219,19 @@ export function CartDrawer({ initialCartCount = 0 }: CartDrawerProps) {
           </div>
 
           <Button
-            className="w-full transition-all duration-200"
+            className="w-full cursor-pointer transition-all duration-200"
             size="lg"
-            onClick={() => {
-              closeCart();
-              router.push('/order');
-            }}
+            onClick={handleCheckout}
+            disabled={isCheckoutLoading}
           >
-            Proceed to Checkout
+            {isCheckoutLoading ? (
+              <>
+                <Loader className="mr-2 h-4 w-4 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              'Proceed to Checkout'
+            )}
           </Button>
 
           <p className="text-xs text-center text-muted-foreground">

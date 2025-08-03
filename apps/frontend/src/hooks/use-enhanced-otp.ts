@@ -12,7 +12,7 @@ export function useEnhancedOTP(email?: string) {
   const [retryCount, setRetryCount] = useState(0);
   const [isLocked, setIsLocked] = useState(false);
   const [lockExpiry, setLockExpiry] = useState<Date | null>(null);
-  const retryTimeoutRef = useRef<NodeJS.Timeout>();
+  const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Initialize API client
   const otpAPI = new EnhancedOTPAPI();
@@ -44,7 +44,6 @@ export function useEnhancedOTP(email?: string) {
       logError(error, {
         component: 'useEnhancedOTP',
         action: context,
-        email,
       });
 
       // Handle account locking
@@ -167,18 +166,7 @@ export function useEnhancedOTP(email?: string) {
     enabled: !!email,
     staleTime: 2000, // Consider data fresh for 2 seconds
     gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
-    refetchInterval: data => {
-      // Stop polling when no cooldown
-      if (!data?.cooldownRemaining || data.cooldownRemaining <= 0) {
-        return false;
-      }
-
-      // Intelligent polling intervals
-      if (data.cooldownRemaining <= 10) return 1000; // Last 10 seconds: every second
-      if (data.cooldownRemaining <= 30) return 2000; // Last 30 seconds: every 2 seconds
-      if (data.cooldownRemaining <= 60) return 5000; // Last minute: every 5 seconds
-      return 10000; // Longer cooldowns: every 10 seconds
-    },
+    refetchInterval: 1000, // Poll every second
     refetchOnWindowFocus: false,
     retry: (failureCount, error) => {
       // Don't retry on client errors

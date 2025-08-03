@@ -2,31 +2,56 @@
  * Next.js Middleware for Instant Server-Side Authentication
  * Provides ChatGPT-style instant navigation with zero loading states
  * Handles all authentication redirects before any content renders
+ * Enhanced with automatic token refresh for seamless user experience
  */
 
 import { enhanceMiddlewareWithStorage } from '@/lib/server-storage-middleware';
+import { checkAuthenticationWithRefresh } from '@/lib/server-token-validator';
 import { NextRequest, NextResponse } from 'next/server';
 
 // Routes that require authentication - instant redirect to login if not authenticated
-const PROTECTED_ROUTES = ['/order', '/profile', '/dashboard', '/checkout', '/bookmarks'];
+const PROTECTED_ROUTES = ['/order', '/profile', '/dashboard', '/checkout', '/bookmarks', '/admin'];
 
 // Routes that should redirect authenticated users - instant redirect to home if authenticated
-const GUEST_ONLY_ROUTES = ['/login', '/register', '/forgot-password', '/signup'];
+const GUEST_ONLY_ROUTES = ['/login', '/register', '/signup'];
+
+// Routes that are accessible to both authenticated and unauthenticated users
+const MIXED_ACCESS_ROUTES = ['/forgot-password'];
 
 // Public routes that don't require authentication checks
 const PUBLIC_ROUTES = ['/', '/products', '/about', '/contact'];
 
 /**
- * Check if user is authenticated by examining cookies
- * This provides instant authentication state without API calls
+ * Check if user is authenticated by examining and validating cookies
+ * Enhanced with automatic token refresh for seamless authentication
+ * This provides instant authentication state with automatic token management
  */
-function isAuthenticated(request: NextRequest): boolean {
-  const accessToken = request.cookies.get('accessToken');
-  const refreshToken = request.cookies.get('refreshToken');
+async function isAuthenticatedWithRefresh(request: NextRequest): Promise<{
+  isAuthenticated: boolean;
+  response?: NextResponse;
+  userRole?: string;
+}> {
+  const result = await checkAuthenticationWithRefresh(request);
 
-  // User is considered authenticated if they have valid tokens
-  // This eliminates the need for API calls in middleware
-  return !!(accessToken?.value && refreshToken?.value);
+  // Extract user role from access token if available
+  let userRole: string | undefined;
+  if (result.isAuthenticated) {
+    const accessToken = request.cookies.get('accessToken')?.value;
+    if (accessToken) {
+      try {
+        const payload = JSON.parse(atob(accessToken.split('.')[1]));
+        userRole = payload.role;
+      } catch {
+        // Ignore token parsing errors
+      }
+    }
+  }
+
+  return {
+    isAuthenticated: result.isAuthenticated,
+    response: result.response,
+    userRole,
+  };
 }
 
 /**
@@ -54,11 +79,18 @@ function createInstantRedirect(url: string, request: NextRequest): NextResponse 
 }
 
 /**
- * Main middleware function
+ * Add pathname header to response for server component access
  */
-export function middleware(request: NextRequest) {
+function addPathnameHeader(response: NextResponse, pathname: string): NextResponse {
+  response.headers.set('x-pathname', pathname);
+  return response;
+}
+
+/**
+ * Main middleware function with enhanced authentication and automatic token refresh
+ */
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const authenticated = isAuthenticated(request);
 
   // Skip middleware for API routes, static files, and Next.js internals
   if (
@@ -71,37 +103,104 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Handle protected routes
+  // Handle public routes first (including specific admin test routes)
+  if (PUBLIC_ROUTES.some(route => pathname.startsWith(route)) || pathname === '/') {
+    // For public routes, we still want to refresh tokens if possible for better UX
+    const authResult = await isAuthenticatedWithRefresh(request);
+
+    // If we got new tokens from refresh, use that response
+    if (authResult.response) {
+      return addPathnameHeader(enhanceMiddlewareWithStorage(request, authResult.response), pathname);
+    }
+
+    // Otherwise, enhance response with storage preloading for better performance
+    return addPathnameHeader(enhanceMiddlewareWithStorage(request, NextResponse.next()), pathname);
+  }
+
+  // Handle protected routes with enhanced authentication
   if (PROTECTED_ROUTES.some(route => pathname.startsWith(route))) {
-    if (!authenticated) {
+    const authResult = await isAuthenticatedWithRefresh(request);
+
+    if (!authResult.isAuthenticated) {
       // Redirect to login with return URL
       const loginUrl = `/login?redirect=${encodeURIComponent(pathname)}`;
       return createInstantRedirect(loginUrl, request);
     }
-    // User is authenticated, allow access
-    return NextResponse.next();
+
+    // Check if this is an admin route and user has admin role
+    if (pathname.startsWith('/admin')) {
+      if (authResult.userRole !== 'ADMIN') {
+        // Non-admin user trying to access admin routes - redirect to home
+        return createInstantRedirect('/', request);
+      }
+    }
+
+    // Check if admin user is trying to access regular dashboard - redirect to admin dashboard
+    if (pathname.startsWith('/dashboard') && authResult.userRole === 'ADMIN') {
+      return createInstantRedirect('/admin', request);
+    }
+
+    // User is authenticated and has proper role, return the response (which may include new tokens)
+    const response = authResult.response || NextResponse.next();
+    return addPathnameHeader(response, pathname);
+  }
+
+  // Handle mixed access routes (forgot password, etc.) - allow both authenticated and unauthenticated users
+  if (MIXED_ACCESS_ROUTES.some(route => pathname.startsWith(route))) {
+    const authResult = await isAuthenticatedWithRefresh(request);
+
+    // Allow access regardless of authentication status
+    // If we got new tokens from refresh, use that response
+    if (authResult.response) {
+      return addPathnameHeader(enhanceMiddlewareWithStorage(request, authResult.response), pathname);
+    }
+
+    return addPathnameHeader(enhanceMiddlewareWithStorage(request, NextResponse.next()), pathname);
   }
 
   // Handle guest-only routes (login, register, etc.)
   if (GUEST_ONLY_ROUTES.some(route => pathname.startsWith(route))) {
-    if (authenticated) {
+    const authResult = await isAuthenticatedWithRefresh(request);
+
+    if (authResult.isAuthenticated) {
       // Check if there's a redirect URL from login flow
       const redirectUrl = getRedirectUrl(request);
-      const destination = redirectUrl || '/';
-      return createInstantRedirect(destination, request);
+
+      // Determine destination based on user role
+      let destination: string;
+      if (authResult.userRole === 'ADMIN') {
+        destination = redirectUrl || '/admin';
+      } else {
+        destination = redirectUrl || '/';
+      }
+
+      const redirectResponse = createInstantRedirect(destination, request);
+
+      // If we have new tokens from refresh, preserve them in the redirect
+      if (authResult.response) {
+        const cookies = authResult.response.cookies.getAll();
+        cookies.forEach(cookie => {
+          redirectResponse.cookies.set(cookie.name, cookie.value, cookie);
+        });
+      }
+
+      return redirectResponse;
     }
     // User is not authenticated, allow access to guest routes
-    return NextResponse.next();
+    return addPathnameHeader(NextResponse.next(), pathname);
   }
 
-  // Handle public routes - no authentication required
-  if (PUBLIC_ROUTES.some(route => pathname.startsWith(route)) || pathname === '/') {
-    // Enhance response with storage preloading for better performance
-    return enhanceMiddlewareWithStorage(request, NextResponse.next());
+
+
+  // Default: allow access to other routes with storage preloading and token refresh
+  const authResult = await isAuthenticatedWithRefresh(request);
+
+  // If we got new tokens from refresh, use that response
+  if (authResult.response) {
+    return addPathnameHeader(enhanceMiddlewareWithStorage(request, authResult.response), pathname);
   }
 
-  // Default: allow access to other routes with storage preloading
-  return enhanceMiddlewareWithStorage(request, NextResponse.next());
+  return addPathnameHeader(enhanceMiddlewareWithStorage(request, NextResponse.next()), pathname);
 }
 
 /**

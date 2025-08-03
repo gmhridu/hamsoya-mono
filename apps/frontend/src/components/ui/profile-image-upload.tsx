@@ -10,6 +10,7 @@ import {
 } from '@/lib/imagekit';
 import { cn } from '@/lib/utils';
 import { Camera, Check, Upload, X } from 'lucide-react';
+import Image from 'next/image';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -108,8 +109,8 @@ export function ProfileImageUpload({
         // Mark image as successfully uploaded
         imageUploadedRef.current = true;
 
-        // Show success feedback
-        toast.success('Profile image uploaded successfully!');
+        // // Show success feedback
+        // toast.success('Profile image uploaded successfully!');
 
         // Clean up preview
         URL.revokeObjectURL(preview);
@@ -182,14 +183,17 @@ export function ProfileImageUpload({
 
   // Enhanced cleanup logic with better lifecycle management
   const handleRemoveImage = useCallback(async () => {
-    if (disabled || preventDeletion || isFormSubmitting) {
+    // CRITICAL: Multiple layers of protection against unwanted deletion
+    if (disabled || preventDeletion || isFormSubmitting || preserveOnUnmount) {
       console.log(
         '🚫 Image removal prevented - disabled:',
         disabled,
         'preventDeletion:',
         preventDeletion,
         'isFormSubmitting:',
-        isFormSubmitting
+        isFormSubmitting,
+        'preserveOnUnmount:',
+        preserveOnUnmount
       );
       return;
     }
@@ -219,7 +223,7 @@ export function ProfileImageUpload({
 
     // Call parent callback
     onImageRemove?.();
-  }, [disabled, preventDeletion, isFormSubmitting, currentFileId, internalFileId, onImageRemove]);
+  }, [disabled, preventDeletion, isFormSubmitting, preserveOnUnmount, currentFileId, internalFileId, onImageRemove]);
 
   // Enhanced cleanup effect with multiple safeguards to prevent unwanted image deletion
   useEffect(() => {
@@ -299,7 +303,14 @@ export function ProfileImageUpload({
       >
         {/* Background Image */}
         {optimizedImageUrl && (
-          <img src={optimizedImageUrl} alt="Profile" className="w-full h-full object-cover" />
+          <Image
+            src={optimizedImageUrl}
+            alt="Profile"
+            fill
+            className="object-cover"
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            priority={false}
+          />
         )}
 
         {/* Upload Overlay */}

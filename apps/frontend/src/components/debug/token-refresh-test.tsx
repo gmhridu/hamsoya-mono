@@ -3,7 +3,7 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { apiClient } from '@/lib/api-client';
-import { tokenRefreshService } from '@/lib/token-refresh-service';
+import { unifiedTokenRefreshService } from '@/lib/unified-token-refresh';
 import { useAuthStore } from '@/store/auth-store';
 import { useState } from 'react';
 
@@ -20,7 +20,7 @@ export function TokenRefreshTest() {
     setIsLoading(true);
     try {
       const result = await apiClient.getCurrentUser();
-      addResult(`✅ API call successful: ${result.data?.name || 'User data received'}`);
+      addResult(`✅ API call successful: ${(result as any).data?.name || 'User data received'}`);
     } catch (error: any) {
       addResult(`❌ API call failed: ${error.message}`);
     } finally {
@@ -31,7 +31,7 @@ export function TokenRefreshTest() {
   const testManualRefresh = async () => {
     setIsLoading(true);
     try {
-      const success = await tokenRefreshService.refreshNow();
+      const success = await unifiedTokenRefreshService.refreshNow();
       addResult(success ? '✅ Manual token refresh successful' : '❌ Manual token refresh failed');
     } catch (error: any) {
       addResult(`❌ Manual token refresh error: ${error.message}`);

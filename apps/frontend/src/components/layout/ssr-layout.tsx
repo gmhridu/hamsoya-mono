@@ -31,13 +31,7 @@ export function SSRLayout({
   return (
     <ServerHydrationProvider serverStorage={serverStorage}>
       <div className={`min-h-screen flex flex-col ${className}`}>
-        {showNavbar && (
-          <Navbar
-            user={user}
-            cartData={serverStorage?.cart}
-            bookmarksData={serverStorage?.bookmarks}
-          />
-        )}
+        {showNavbar && <Navbar />}
 
         <main className="flex-1">{children}</main>
 

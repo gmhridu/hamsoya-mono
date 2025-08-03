@@ -17,20 +17,22 @@ export function useAsyncAction<T extends any[], R>(
 
   const execute = useCallback(
     (...args: T) => {
-      startTransition(async () => {
-        try {
-          const result = await asyncFunction(...args);
-          options.onSuccess?.(result);
-          return result;
-        } catch (error) {
-          // Handle error with error handler
-          if (options.showErrorToast !== false) {
-            handleApiError(error, options.errorContext);
+      startTransition(() => {
+        (async () => {
+          try {
+            const result = await asyncFunction(...args);
+            options.onSuccess?.(result);
+            return result;
+          } catch (error) {
+            // Handle error with error handler
+            if (options.showErrorToast !== false) {
+              handleApiError(error, options.errorContext);
+            }
+
+            options.onError?.(error);
+            throw error;
           }
-          
-          options.onError?.(error);
-          throw error;
-        }
+        })();
       });
     },
     [asyncFunction, options, handleApiError]
@@ -52,10 +54,10 @@ export function useFormAction<T extends Record<string, any>, R>(
   const handleSubmit = useCallback(
     (event: React.FormEvent<HTMLFormElement>) => {
       event.preventDefault();
-      
+
       const formData = new FormData(event.currentTarget);
       const data = Object.fromEntries(formData.entries()) as T;
-      
+
       execute(data);
     },
     [execute]
@@ -78,7 +80,7 @@ export function useButtonAction<T extends any[], R>(
   const handleClick = useCallback(
     (event: React.MouseEvent<HTMLButtonElement>) => {
       event.preventDefault();
-      execute();
+      execute(...([] as unknown as T));
     },
     [execute]
   );

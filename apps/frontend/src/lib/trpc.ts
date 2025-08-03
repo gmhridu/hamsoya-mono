@@ -23,7 +23,7 @@ function getBaseUrl() {
   }
 
   // Fallback for development
-  return 'http://localhost:5001';
+  return 'http://localhost:5000/trpc';
 }
 
 // tRPC client configuration for React Query

@@ -80,6 +80,60 @@ class ToastService {
   }
 
   /**
+   * Update an existing toast with new content
+   * Uses dismiss + new toast approach for reliable replacement
+   */
+  update(toastId: string | number, message: string, type: 'success' | 'error' | 'warning' | 'info' = 'success'): void {
+    // Dismiss the existing loading toast
+    this.dismiss(toastId);
+
+    // Show new toast with same ID after a brief delay to ensure clean replacement
+    setTimeout(() => {
+      const options = {
+        id: toastId,
+        duration: type === 'error' ? 4000 : 3000,
+      };
+
+      switch (type) {
+        case 'success':
+          toast.success(message, options);
+          break;
+        case 'error':
+          toast.error(message, options);
+          break;
+        case 'warning':
+          toast.warning(message, options);
+          break;
+        case 'info':
+          toast.info(message, options);
+          break;
+      }
+    }, 100);
+  }
+
+  /**
+   * Replace a loading toast with a success toast
+   * More explicit method for better reliability
+   */
+  replaceWithSuccess(toastId: string | number, message: string): void {
+    this.dismiss(toastId);
+    setTimeout(() => {
+      toast.success(message, { duration: 3000 });
+    }, 100);
+  }
+
+  /**
+   * Replace a loading toast with an error toast
+   * More explicit method for better reliability
+   */
+  replaceWithError(toastId: string | number, message: string): void {
+    this.dismiss(toastId);
+    setTimeout(() => {
+      toast.error(message, { duration: 4000 });
+    }, 100);
+  }
+
+  /**
    * Dismiss a specific toast
    */
   dismiss(toastId: string | number): void {
@@ -114,24 +168,93 @@ class ToastService {
   }
 
   /**
-   * Authentication-specific toasts
+   * Authentication-specific toasts with loading state management
    */
   auth = {
-    loginSuccess: () => this.success('Welcome back! 👋', { duration: 2000 }),
-    loginError: (error: string) => this.error(`Login failed: ${error}`),
-    logoutSuccess: () => this.success('Logged out successfully', { duration: 2000 }),
-    registrationSuccess: (email: string) => 
+    // Sign in flow
+    signingIn: () => this.loading('Signing in...'),
+    loginSuccess: (username?: string, toastId?: string | number) => {
+      const message = username ? `Welcome back ${username}! 👋` : 'Welcome back! 👋';
+      if (toastId) {
+        this.replaceWithSuccess(toastId, message);
+      } else {
+        return this.success(message, { duration: 3000 });
+      }
+    },
+    loginError: (error: string, toastId?: string | number) => {
+      const message = `Login failed: ${error}`;
+      if (toastId) {
+        this.replaceWithError(toastId, message);
+      } else {
+        return this.error(message);
+      }
+    },
+
+    // Sign out flow
+    signingOut: () => this.loading('Signing out...'),
+    logoutSuccess: (toastId?: string | number) => {
+      const message = 'Signed out successfully';
+      if (toastId) {
+        this.replaceWithSuccess(toastId, message);
+      } else {
+        return this.success(message, { duration: 3000 });
+      }
+    },
+
+    // Registration
+    registrationSuccess: (email: string) =>
       this.success(`Registration successful! Please check ${email} for verification.`, { duration: 5000 }),
     registrationError: (error: string) => this.error(`Registration failed: ${error}`),
-    tokenRefreshSuccess: () => this.showOnce('token-refresh', () => 
+
+    // Token management
+    tokenRefreshSuccess: () => this.showOnce('token-refresh', () =>
       this.info('Session refreshed', { duration: 1000 })),
-    tokenRefreshError: () => this.showOnce('token-refresh-error', () => 
+    tokenRefreshError: () => this.showOnce('token-refresh-error', () =>
       this.error('Session expired. Please log in again.', { duration: 3000 })),
-    emailVerificationSent: (email: string) => 
+
+    // Forgot password flow
+    sendingOTP: () => this.loading('Sending verification code...'),
+    otpSent: () => this.success('Verification code sent! Please check your email.', { duration: 4000 }),
+    verifyingOTP: () => this.loading('Verifying code...'),
+    otpVerified: () => this.success('Code verified successfully!', { duration: 3000 }),
+    resettingPassword: () => this.loading('Resetting password...'),
+    passwordReset: () => this.success('Password reset successfully! You can now sign in.', { duration: 4000 }),
+    error: (message: string) => this.error(message),
+  };
+
+  /**
+   * Checkout-specific toasts with loading state management
+   */
+  checkout = {
+    // Checkout flow
+    processingCheckout: () => this.loading('Preparing checkout...'),
+    checkoutSuccess: (toastId?: string | number) => {
+      const message = 'Redirecting to checkout page...';
+      if (toastId) {
+        this.replaceWithSuccess(toastId, message);
+      } else {
+        return this.success(message, { duration: 3000 });
+      }
+    },
+    checkoutError: (error: string, toastId?: string | number) => {
+      const message = `Checkout failed: ${error}`;
+      if (toastId) {
+        this.replaceWithError(toastId, message);
+      } else {
+        return this.error(message);
+      }
+    },
+  };
+
+  /**
+   * Email verification and password reset toasts
+   */
+  email = {
+    verificationSent: (email: string) =>
       this.success(`Verification email sent to ${email}`, { duration: 4000 }),
-    emailVerificationSuccess: () => this.success('Email verified successfully! 🎉', { duration: 3000 }),
-    emailVerificationError: (error: string) => this.error(`Verification failed: ${error}`),
-    passwordResetSent: (email: string) => 
+    verificationSuccess: () => this.success('Email verified successfully! 🎉', { duration: 3000 }),
+    verificationError: (error: string) => this.error(`Verification failed: ${error}`),
+    passwordResetSent: (email: string) =>
       this.info(`Password reset instructions sent to ${email}`, { duration: 4000 }),
     passwordResetSuccess: () => this.success('Password reset successfully', { duration: 3000 }),
     passwordResetError: (error: string) => this.error(`Password reset failed: ${error}`),
@@ -141,11 +264,11 @@ class ToastService {
    * Cart-specific toasts
    */
   cart = {
-    itemAdded: (productName: string) => 
+    itemAdded: (productName: string) =>
       this.success(`${productName} added to cart`, { duration: 2000 }),
-    itemRemoved: (productName: string) => 
+    itemRemoved: (productName: string) =>
       this.info(`${productName} removed from cart`, { duration: 2000 }),
-    itemUpdated: (productName: string, quantity: number) => 
+    itemUpdated: (productName: string, quantity: number) =>
       this.info(`${productName} quantity updated to ${quantity}`, { duration: 2000 }),
     cartCleared: () => this.info('Cart cleared', { duration: 2000 }),
     cartError: (error: string) => this.error(`Cart error: ${error}`),
@@ -155,9 +278,9 @@ class ToastService {
    * Bookmark-specific toasts
    */
   bookmarks = {
-    itemAdded: (productName: string) => 
+    itemAdded: (productName: string) =>
       this.success(`${productName} bookmarked`, { duration: 2000 }),
-    itemRemoved: (productName: string) => 
+    itemRemoved: (productName: string) =>
       this.info(`${productName} removed from bookmarks`, { duration: 2000 }),
     bookmarksCleared: () => this.info('All bookmarks cleared', { duration: 2000 }),
     bookmarkError: (error: string) => this.error(`Bookmark error: ${error}`),
@@ -167,7 +290,7 @@ class ToastService {
    * Order-specific toasts
    */
   order = {
-    orderPlaced: (orderId: string) => 
+    orderPlaced: (orderId: string) =>
       this.success(`Order #${orderId} placed successfully! 🎉`, { duration: 5000 }),
     orderError: (error: string) => this.error(`Order failed: ${error}`),
     paymentSuccess: () => this.success('Payment processed successfully', { duration: 3000 }),

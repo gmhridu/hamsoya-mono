@@ -43,13 +43,15 @@ export function ProductDetailClient({
 
   const router = useRouter();
   const { isAuthenticated } = useAuthStore();
-  const { addItem, isInCart, getItemQuantity } = useCartStore();
+  const { addItem, isInCart, getItemQuantity, isHydrated } = useCartStore();
   const { toggleBookmark, isBookmarked } = useBookmarksStore();
 
   // For guest users, always show "not bookmarked" state to prevent hydration mismatches
   const isProductBookmarked = isAuthenticated ? isBookmarked(product.id) : false;
-  const isProductInCart = isInCart(product.id);
-  const cartQuantity = getItemQuantity(product.id);
+
+  // Prevent hydration mismatch by only showing cart state after hydration
+  const isProductInCart = isHydrated ? isInCart(product.id) : false;
+  const cartQuantity = isHydrated ? getItemQuantity(product.id) : 0;
 
   const averageRating =
     reviews.length > 0

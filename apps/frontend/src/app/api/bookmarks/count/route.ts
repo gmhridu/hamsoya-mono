@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
     const count = data.result?.data || 0;
 
     // Update cookie with latest count
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     cookieStore.set('bookmark_count', count.toString(), {
       httpOnly: false,
       secure: process.env.NODE_ENV === 'production',
@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
     console.error('Bookmark count error:', error);
 
     // Fallback to cookie value
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const cookieCount = cookieStore.get('bookmark_count')?.value;
     return NextResponse.json({ count: parseInt(cookieCount || '0', 10) });
   }

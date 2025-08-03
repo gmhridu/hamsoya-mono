@@ -67,10 +67,10 @@ export function useOptimizedCooldown(email: string | null, options: UseCooldownO
         errorCountRef.current = 0; // Reset error count on success
 
         // Extract cooldown data from response
-        const data = response.data || response;
+        const data = (response as any).data || response;
         return {
-          cooldownRemaining: data.cooldownRemaining || 0,
-          canResend: data.canResend ?? true,
+          cooldownRemaining: (data as any).cooldownRemaining || 0,
+          canResend: (data as any).canResend ?? true,
         };
       } catch (error) {
         errorCountRef.current += 1;
@@ -82,31 +82,7 @@ export function useOptimizedCooldown(email: string | null, options: UseCooldownO
     gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
     refetchOnWindowFocus: false, // Don't refetch when window gains focus
     refetchOnMount: true, // Refetch when component mounts
-    refetchInterval: (data, query) => {
-      // Don't poll if component is unmounted or disabled
-      if (!isActiveRef.current || !enabled) {
-        return false;
-      }
-
-      // Handle error scenarios with exponential backoff
-      if (query.state.error) {
-        return getErrorBackoffInterval(errorCountRef.current);
-      }
-
-      // Use intelligent polling based on cooldown remaining
-      if (data) {
-        const interval = getPollingInterval(data.cooldownRemaining);
-        // Add some jitter to prevent thundering herd
-        if (interval && typeof interval === 'number') {
-          return interval + Math.random() * 500; // Add 0-500ms jitter
-        }
-        return interval;
-      }
-
-      // Default fallback with jitter
-      return 5000 + Math.random() * 1000; // 5-6 seconds
-    },
-    refetchOnWindowFocus: false, // Don't refetch on window focus
+    refetchInterval: 1000, // Poll every second for simplicity
     refetchOnReconnect: true, // Refetch on network reconnect
     retry: (failureCount, error: any) => {
       // Don't retry on client errors (4xx)

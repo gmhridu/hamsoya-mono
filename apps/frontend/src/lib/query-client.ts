@@ -8,6 +8,10 @@ export const queryClient = new QueryClient({
       staleTime: 5 * 60 * 1000, // 5 minutes for most data
       // Cache time: how long data stays in cache after component unmounts
       gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
+      // Disable automatic refetching to prevent excessive polling
+      refetchOnWindowFocus: false,
+      refetchOnMount: false,
+      refetchOnReconnect: false,
       // Retry configuration
       retry: (failureCount, error: any) => {
         // Don't retry on 4xx errors (client errors)
@@ -19,12 +23,6 @@ export const queryClient = new QueryClient({
       },
       // Retry delay with exponential backoff
       retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
-      // Don't refetch on window focus by default
-      refetchOnWindowFocus: false,
-      // Refetch on reconnect for critical data
-      refetchOnReconnect: true,
-      // Don't refetch on mount if data is fresh
-      refetchOnMount: 'always',
       // Network mode configuration
       networkMode: 'online',
     },

@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { User } from '@/types/auth';
-import { Calendar, Heart, LogOut, Mail, Package, Phone, Settings, Shield } from 'lucide-react';
+import { Calendar, Heart, LogOut, Mail, Package, Phone, Settings, Shield, User as UserIcon } from 'lucide-react';
 import { useCallback } from 'react';
 
 interface DashboardContentProps {
@@ -60,7 +60,7 @@ export function DashboardContent({ user }: DashboardContentProps) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <User className="h-5 w-5" />
+            <UserIcon className="h-5 w-5" />
             Profile Information
           </CardTitle>
         </CardHeader>
@@ -81,7 +81,7 @@ export function DashboardContent({ user }: DashboardContentProps) {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-sm">
-                    <User className="h-4 w-4 text-muted-foreground" />
+                    <UserIcon className="h-4 w-4 text-muted-foreground" />
                     <span className="font-medium">{user.name}</span>
                   </div>
 

@@ -59,7 +59,7 @@ const LoadingButton = React.forwardRef<HTMLButtonElement, LoadingButtonProps>(
     ref
   ) => {
     const Comp = asChild ? Slot : 'button';
-    
+
     const isDisabled = disabled || loading;
     const displayText = loading && loadingText ? loadingText : children;
     const icon = loading ? (loadingIcon || <Loader2 className="h-4 w-4 animate-spin" />) : null;
@@ -182,4 +182,4 @@ const SubmitButton = React.forwardRef<HTMLButtonElement, SubmitButtonProps>(
 SubmitButton.displayName = 'SubmitButton';
 
 export { LoadingButton, AsyncButton, SubmitButton, buttonVariants };
-export type { LoadingButtonProps, AsyncButtonProps, SubmitButtonProps };
+export type { AsyncButtonProps, SubmitButtonProps };

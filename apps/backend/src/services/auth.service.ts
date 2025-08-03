@@ -351,13 +351,10 @@ export class AuthService {
   async forgotPassword(input: ForgotPasswordInput): Promise<{ message: string }> {
     const { email } = input;
 
-    // Check if user exists
+    // Check if user exists - provide clear feedback for better UX
     const user = await this.getUserByEmail(email);
     if (!user) {
-      // Don't reveal if user exists or not
-      return {
-        message: 'If an account with this email exists, you will receive a password reset OTP.',
-      };
+      throw new AppError('This email address is not registered. Please check your email or create a new account.', 404);
     }
 
     // Check rate limiting
@@ -366,8 +363,8 @@ export class AuthService {
     // Generate OTP
     const otp = generateOTP();
 
-    // Store OTP in Redis
-    await this.redis.setOTP(email, otp);
+    // Store OTP in Redis using password reset specific methods
+    await this.redis.setPasswordResetOTP(email, otp);
     await this.redis.setCooldown(email, 'password_reset');
 
     // Send email using enhanced templates
@@ -395,27 +392,27 @@ export class AuthService {
       throw new AppError('User not found', 404);
     }
 
-    // Check if account is locked due to too many failed attempts
-    const failCount = await this.redis.getOTPFailCount(email);
-    if (failCount >= 5) {
+    // Check if account is locked due to too many failed attempts for password reset
+    const isLocked = await this.redis.checkLock(email, 'password_reset');
+    if (isLocked) {
       throw new AppError('Too many incorrect attempts. Account locked for 15 minutes.', 429);
     }
 
-    // Get stored OTP
-    const storedOTP = await this.redis.getOTP(email);
+    // Get stored password reset OTP
+    const storedOTP = await this.redis.getPasswordResetOTP(email);
     if (!storedOTP) {
       throw new AppError('OTP expired or not found. Please request a new one.', 400);
     }
 
-    // Verify OTP using consistent attempt counting
+    // Verify OTP using password reset specific attempt counting
     if (otp !== storedOTP) {
-      // Increment failure count using the enhanced system
-      const newFailCount = await this.redis.incrementOTPFailCount(email);
-      const remainingAttempts = 5 - newFailCount;
+      // Increment failure count for password reset
+      const attempts = await this.redis.incrementAttempts(email, 'password_reset');
+      const remainingAttempts = 3 - attempts;
 
       if (remainingAttempts <= 0) {
-        // Lock the account
-        await this.redis.setLock(email, 15); // 15 minutes lock
+        // Lock the account for password reset
+        await this.redis.setLock(email, 15, 'password_reset'); // 15 minutes lock
         await this.redis.cleanup(email, 'password_reset');
         throw new AppError('Too many incorrect attempts. Account locked for 15 minutes.', 429);
       }
@@ -428,6 +425,79 @@ export class AuthService {
     await this.redis.cleanup(email, 'password_reset');
 
     return { message: 'OTP verified. You can now reset your password.' };
+  }
+
+  // Enhanced forgot password OTP verification with detailed error handling
+  async verifyForgotPasswordOTPEnhanced(
+    input: VerifyOTPInput,
+    clientIP: string
+  ): Promise<{ message: string; remainingAttempts?: number }> {
+    const { email, otp } = input;
+
+    // Check if user exists
+    const user = await this.getUserByEmail(email);
+    if (!user) {
+      throw new AppError('User not found', 404);
+    }
+
+    // Check if account is locked due to too many failed attempts for password reset
+    const isLocked = await this.redis.checkLock(email, 'password_reset');
+    if (isLocked) {
+      throw new AppError('Too many incorrect attempts. Account locked for 15 minutes.', 429);
+    }
+
+    // Get stored password reset OTP
+    const storedOTP = await this.redis.getPasswordResetOTP(email);
+    if (!storedOTP) {
+      throw new AppError('OTP expired or not found. Please request a new one.', 400);
+    }
+
+    // Validate OTP format
+    if (!otp || otp.length !== 6 || !/^\d{6}$/.test(otp)) {
+      throw new AppError('Invalid OTP format. Please enter a 6-digit code.', 400);
+    }
+
+    // Verify OTP
+    const isValidOTP = otp === storedOTP;
+
+    if (!isValidOTP) {
+      // Security audit logging for failed attempt
+      await securityAudit.logOTPFailed(email, clientIP, undefined, 'invalid_password_reset_otp');
+
+      // Increment failure count for password reset
+      const attempts = await this.redis.incrementAttempts(email, 'password_reset');
+      const remainingAttempts = 3 - attempts;
+
+      if (remainingAttempts <= 0) {
+        // Security audit logging for account lock
+        await securityAudit.logAccountLocked(email, clientIP, undefined, 'max_password_reset_attempts');
+
+        // Lock the account for password reset
+        await this.redis.setLock(email, 15, 'password_reset'); // 15 minutes lock
+        await this.redis.cleanup(email, 'password_reset');
+        throw new AppError('Too many incorrect attempts. Account locked for 15 minutes.', 429);
+      }
+
+      throw new AppError(`Invalid OTP. ${remainingAttempts} attempts remaining.`, 400);
+    }
+
+    // OTP is valid - mark as verified and cleanup
+    await this.redis.setPasswordResetVerified(email);
+    await this.redis.cleanup(email, 'password_reset');
+
+    // Security audit logging for successful verification
+    await securityAudit.logOTPVerified(email, clientIP, undefined, 'password_reset');
+
+    return {
+      message: 'OTP verified successfully. You can now reset your password.',
+      remainingAttempts: undefined
+    };
+  }
+
+  // Check if password reset OTP was verified
+  async checkPasswordResetVerification(email: string): Promise<{ verified: boolean }> {
+    const isVerified = await this.redis.checkPasswordResetVerified(email);
+    return { verified: isVerified };
   }
 
   // Reset password

@@ -3,6 +3,24 @@
  * Centralized exports for all server-side auth functionality
  */
 
+import type { User } from '@/types/auth';
+import {
+  getCurrentUser,
+  getCurrentUserWithRefresh,
+  getServerUser,
+  hasRole,
+  isAdmin,
+  isAuthenticated,
+  isSeller,
+  protectRoute,
+  requireAdmin,
+  requireAuth,
+  requireGuest,
+  requireRole,
+  requireSeller,
+  type AuthResult,
+} from './auth-server';
+
 // Re-export all auth utilities
 export {
   getCurrentUser,
@@ -19,8 +37,15 @@ export {
   requireRole,
   requireSeller,
   type AuthResult,
-  type User,
+
 } from './auth-server';
+import {
+  getUserOrRedirect,
+  redirectIfAuthenticated,
+  redirectIfInsufficientRole,
+  redirectIfNotAuthenticated,
+  withServerAuth,
+} from './auth-redirects';
 
 export {
   getUserOrRedirect,
@@ -28,7 +53,7 @@ export {
   redirectIfInsufficientRole,
   redirectIfNotAuthenticated,
   withServerAuth,
-} from './auth-redirects';
+};
 
 // Additional utility types
 export interface ServerAuthOptions {
@@ -66,18 +91,19 @@ export const requireGuestAccess = () => requireGuest();
  * Common redirect patterns
  */
 
+// TODO: Implement redirect functions
 // Protect dashboard route
-export const protectDashboard = (currentPath?: string) =>
-  redirectIfNotAuthenticated(currentPath || '/dashboard');
+// export const protectDashboard = (currentPath?: string) =>
+//   redirectIfNotAuthenticated(currentPath || '/dashboard');
 
 // Protect admin route
-export const protectAdmin = () => redirectIfInsufficientRole(['ADMIN'], '/');
+// export const protectAdmin = () => redirectIfInsufficientRole(['ADMIN'], '/');
 
 // Protect seller route
-export const protectSellerRoute = () => redirectIfInsufficientRole(['SELLER', 'ADMIN'], '/');
+// export const protectSellerRoute = () => redirectIfInsufficientRole(['SELLER', 'ADMIN'], '/');
 
 // Redirect from login if authenticated
-export const redirectFromLogin = () => redirectIfAuthenticated('/');
+// export const redirectFromLogin = () => redirectIfAuthenticated('/');
 
 /**
  * Server component auth patterns

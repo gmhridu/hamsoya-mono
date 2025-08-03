@@ -6,7 +6,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { initializeGuestData, cleanupExpiredGuestData } from '@/lib/guest-data-migration';
+import { initializeGuestData } from '@/lib/guest-data-migration';
 import { useAuthStore } from '@/store/auth-store';
 
 /**
@@ -17,8 +17,8 @@ export function useAppInitialization() {
   const { isAuthenticated } = useAuthStore();
 
   useEffect(() => {
-    // Clean up expired guest data on app startup
-    cleanupExpiredGuestData();
+    // TODO: Clean up expired guest data on app startup
+    // cleanupExpiredGuestData();
 
     // Initialize guest data if user is not authenticated
     if (!isAuthenticated) {

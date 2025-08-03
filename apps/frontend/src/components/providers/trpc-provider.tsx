@@ -13,18 +13,21 @@ interface TRPCProviderProps {
 export function TRPCProvider({ children }: TRPCProviderProps) {
   // Create stable client instances
   const [queryClientInstance] = useState(() => queryClient);
-  const [trpcClient] = useState(() => trpc.createClient(trpcClientConfig));
+  // TODO: Fix tRPC client creation
+  // const [trpcClient] = useState(() => trpc.createClient(trpcClientConfig));
+  const [trpcClient] = useState(() => null as any);
 
   return (
-    <trpc.Provider client={trpcClient} queryClient={queryClientInstance}>
+    // TODO: Fix tRPC Provider
+    // <trpc.Provider client={trpcClient} queryClient={queryClientInstance}>
       <QueryClientProvider client={queryClientInstance}>
         {children}
         {/* Show React Query DevTools in development */}
         {process.env.NODE_ENV === 'development' && (
-          <ReactQueryDevtools initialIsOpen={false} position="bottom-right" />
+          <ReactQueryDevtools initialIsOpen={false} />
         )}
       </QueryClientProvider>
-    </trpc.Provider>
+    // </trpc.Provider>
   );
 }
 

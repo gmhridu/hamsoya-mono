@@ -153,7 +153,7 @@ class AuthCacheManager {
    */
   getCachedUserData(): User | null {
     const cached = queryClient.getQueryData(AUTH_QUERY_KEYS.me);
-    return cached?.data || null;
+    return (cached as any)?.data || null;
   }
 
   /**

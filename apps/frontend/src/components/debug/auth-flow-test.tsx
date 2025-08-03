@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useCurrentUser } from '@/hooks/use-auth';
 import { getAuthDebugInfo, runAuthDiagnostics } from '@/lib/auth-debug';
 import { useAuthStore } from '@/store/auth-store';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 export function AuthFlowTest() {

@@ -63,13 +63,13 @@ export function useAuth(): UseAuthReturn {
 
   // Handle query state changes
   useEffect(() => {
-    if (isSuccess && userData?.data) {
+    if (isSuccess && (userData as any)?.data) {
       // Update store with fresh user data
-      setUser(userData.data);
+      setUser((userData as any).data);
       setLoading(false);
     } else if (isError && queryError) {
       // Handle auth errors
-      if (queryError.statusCode === 401) {
+      if ((queryError as any).statusCode === 401) {
         clearUser();
       } else {
         setError(queryError.message || 'Authentication failed');
@@ -102,7 +102,7 @@ export function useAuth(): UseAuthReturn {
 
         // Call login API
         const response = await apiClient.login(credentials.email, credentials.password);
-        const userData = response?.data?.user || response?.user;
+        const userData = (response as any)?.data?.user || (response as any)?.user;
 
         if (userData) {
           // Immediately update store for instant UI updates

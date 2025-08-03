@@ -5,6 +5,7 @@
 
 import { useBookmarksStore } from '@/store/bookmarks-store';
 import { useCartStore } from '@/store/cart-store';
+import { initializeEnhancedStorage, cleanupExpiredData } from '@/lib/enhanced-guest-storage';
 
 /**
  * Migration result interface

@@ -4,6 +4,7 @@
 
 import type { User } from '@/types/auth';
 import { AUTH_CONFIG, AUTH_QUERY_KEYS } from '@/types/auth';
+import { authCacheManager } from './auth-cache-manager';
 import { queryClient } from './query-client';
 
 /**
@@ -112,7 +113,8 @@ export function storeRedirectUrl(url: string): void {
 }
 
 /**
- * Optimized login success handler
+ * Optimized login success handler with client-side navigation
+ * Uses Next.js router for seamless navigation without page reloads
  */
 export async function handleLoginSuccess(user: User, redirectUrl?: string): Promise<void> {
   // Hydrate user data immediately
@@ -124,11 +126,39 @@ export async function handleLoginSuccess(user: User, redirectUrl?: string): Prom
   // Get final redirect URL
   const finalRedirectUrl = redirectUrl || getAndClearStoredRedirect() || getLoginRedirectUrl('/');
 
-  // Use window.location.replace for instant redirect without history entry
-  // This provides smooth, instant navigation like ChatGPT
+  // Use Next.js router for seamless client-side navigation
+  // This provides smooth navigation with loading states for slow connections
   if (typeof window !== 'undefined') {
-    window.location.replace(finalRedirectUrl);
+    // Import router dynamically to avoid SSR issues
+    const { useRouter } = await import('next/navigation');
+
+    // For immediate navigation, we'll use a custom event that components can listen to
+    window.dispatchEvent(new CustomEvent('auth:navigate', {
+      detail: { path: finalRedirectUrl, replace: true }
+    }));
   }
+}
+
+/**
+ * Enhanced login success handler with router instance
+ * For use in components that already have router access
+ */
+export function handleLoginSuccessWithRouter(
+  user: User,
+  router: any,
+  redirectUrl?: string
+): void {
+  // Hydrate user data immediately
+  hydrateUserData(user);
+
+  // Preload critical data in background
+  preloadUserData(user).catch(console.error);
+
+  // Get final redirect URL
+  const finalRedirectUrl = redirectUrl || getAndClearStoredRedirect() || getLoginRedirectUrl('/');
+
+  // Use router.replace for seamless navigation without history entry
+  router.replace(finalRedirectUrl);
 }
 
 /**

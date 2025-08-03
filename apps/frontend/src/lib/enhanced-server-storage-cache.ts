@@ -7,7 +7,7 @@
 import { CartItem, Product } from '@/types';
 import { cookies } from 'next/headers';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 // Server-side storage data interfaces
 export interface ServerCartData {
@@ -76,8 +76,11 @@ async function fetchCartData(): Promise<ServerCartData> {
       };
     }
 
-    // Try to fetch from backend using GET for tRPC query
+    // Try to fetch from backend using GET for tRPC query with timeout
     const inputData = { sessionId };
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 second timeout
+
     const response = await fetch(
       `${BACKEND_URL}/trpc/cart.get?input=${encodeURIComponent(JSON.stringify(inputData))}`,
       {
@@ -85,8 +88,9 @@ async function fetchCartData(): Promise<ServerCartData> {
         headers: {
           'Content-Type': 'application/json',
         },
+        signal: controller.signal,
       }
-    );
+    ).finally(() => clearTimeout(timeoutId));
 
     if (response.ok) {
       const data = await response.json();
@@ -161,8 +165,11 @@ async function fetchBookmarkData(): Promise<ServerBookmarksData> {
       };
     }
 
-    // Try to fetch from backend using GET for tRPC query
+    // Try to fetch from backend using GET for tRPC query with timeout
     const inputData = { sessionId };
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 second timeout
+
     const response = await fetch(
       `${BACKEND_URL}/trpc/bookmarks.get?input=${encodeURIComponent(JSON.stringify(inputData))}`,
       {
@@ -170,8 +177,9 @@ async function fetchBookmarkData(): Promise<ServerBookmarksData> {
         headers: {
           'Content-Type': 'application/json',
         },
+        signal: controller.signal,
       }
-    );
+    ).finally(() => clearTimeout(timeoutId));
 
     if (response.ok) {
       const data = await response.json();

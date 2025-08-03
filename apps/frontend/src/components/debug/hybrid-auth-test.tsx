@@ -17,15 +17,15 @@ export function HybridAuthTest() {
 
   const getAccessTokenFromCookie = (): string | null => {
     if (typeof document === 'undefined') return null;
-    
+
     const value = `; ${document.cookie}`;
     const parts = value.split(`; accessToken=`);
-    
+
     if (parts.length === 2) {
       const cookieValue = parts.pop()?.split(';').shift();
       return cookieValue || null;
     }
-    
+
     return null;
   };
 
@@ -51,7 +51,7 @@ export function HybridAuthTest() {
     setIsLoading(true);
     try {
       const result = await apiClient.getCurrentUser();
-      addResult(`✅ API call with Authorization header successful: ${result.data?.name || 'User data received'}`);
+      addResult(`✅ API call with Authorization header successful: ${(result as any).data?.name || 'User data received'}`);
     } catch (error: any) {
       addResult(`❌ API call failed: ${error.message}`);
     } finally {
@@ -66,10 +66,10 @@ export function HybridAuthTest() {
         method: 'POST',
         credentials: 'same-origin',
       });
-      
+
       if (response.ok) {
         addResult(`✅ Token refresh successful`);
-        
+
         // Check if new access token is available
         setTimeout(() => {
           const newToken = getAccessTokenFromCookie();

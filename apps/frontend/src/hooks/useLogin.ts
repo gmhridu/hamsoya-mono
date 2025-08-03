@@ -7,10 +7,12 @@
 
 import { apiClient } from '@/lib/api-client';
 import { migrateGuestDataToUser } from '@/lib/guest-data-migration';
+import { useLoginFlow } from '@/lib/post-login-navigation';
+import { toastService } from '@/lib/toast-service';
 import { useAuthActions } from '@/store/auth-store';
 import type { LoginCredentials, UseLoginReturn, User } from '@/types/auth';
 import { useMutation } from '@tanstack/react-query';
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 
 // Type for the API response structure
@@ -30,6 +32,8 @@ interface LoginApiResponse {
  */
 export function useLogin(): UseLoginReturn {
   const { setUser, setLoading, setError, clearError } = useAuthActions();
+  const { handleLoginSuccess } = useLoginFlow();
+  const loadingToastRef = useRef<string | number | null>(null);
 
   // TanStack Query mutation for login with optimistic updates
   const loginMutation = useMutation<LoginApiResponse, Error, LoginCredentials>({
@@ -40,6 +44,9 @@ export function useLogin(): UseLoginReturn {
       // Start loading state immediately
       setLoading(true);
       clearError();
+
+      // Show loading toast
+      loadingToastRef.current = toastService.auth.signingIn();
     },
     onSuccess: response => {
       try {
@@ -56,7 +63,7 @@ export function useLogin(): UseLoginReturn {
         migrateGuestDataToUser()
           .then(migrationResult => {
             if (migrationResult.cartMigrated || migrationResult.bookmarksMigrated) {
-              let migrationMessage = 'Welcome back! ';
+              let migrationMessage = `Welcome back ${userData.name}! `;
               if (migrationResult.cartMigrated && migrationResult.bookmarksMigrated) {
                 migrationMessage += `Your cart (${migrationResult.cartItemsAdded} items) and bookmarks (${migrationResult.bookmarksAdded} items) have been restored.`;
               } else if (migrationResult.cartMigrated) {
@@ -65,21 +72,28 @@ export function useLogin(): UseLoginReturn {
                 migrationMessage += `Your bookmarks (${migrationResult.bookmarksAdded} items) have been restored.`;
               }
 
-              toast.success(migrationMessage, {
-                duration: 4000,
-              });
+              // Update loading toast with migration message
+              if (loadingToastRef.current) {
+                toastService.replaceWithSuccess(loadingToastRef.current, migrationMessage);
+              } else {
+                toast.success(migrationMessage, { duration: 4000 });
+              }
             } else {
               // Standard welcome message if no migration occurred
-              toast.success(`Welcome back ${userData.name}! 👋`, {
-                duration: 2000,
-              });
+              if (loadingToastRef.current) {
+                toastService.auth.loginSuccess(userData.name, loadingToastRef.current);
+              } else {
+                toastService.auth.loginSuccess(userData.name);
+              }
             }
           })
           .catch(() => {
             // Fallback to standard welcome message if migration fails
-            toast.success(`Welcome back ${userData.name}! 👋`, {
-              duration: 2000,
-            });
+            if (loadingToastRef.current) {
+              toastService.auth.loginSuccess(userData.name, loadingToastRef.current);
+            } else {
+              toastService.auth.loginSuccess(userData.name);
+            }
           });
 
         // Clear loading state
@@ -89,11 +103,14 @@ export function useLogin(): UseLoginReturn {
         const urlParams = new URLSearchParams(window.location.search);
         const redirectTo = urlParams.get('redirect') || '/';
 
-        // Use window.location.replace for instant redirect without history entry
-        // This provides ChatGPT-style instant navigation
-        if (typeof window !== 'undefined') {
-          window.location.replace(redirectTo);
-        }
+        // Use Next.js router for seamless client-side navigation
+        // This provides smooth navigation with loading states for slow connections
+        handleLoginSuccess(redirectTo);
+
+        // Clear the loading toast reference after a short delay to ensure toast update completes
+        setTimeout(() => {
+          loadingToastRef.current = null;
+        }, 100);
       } catch (error: any) {
         setError('Login succeeded but failed to update user data');
         setLoading(false);
@@ -109,10 +126,13 @@ export function useLogin(): UseLoginReturn {
       setError(errorMessage);
       setLoading(false);
 
-      // Show error toast
-      toast.error(errorMessage, {
-        duration: 4000,
-      });
+      // Show error toast (update loading toast if exists)
+      if (loadingToastRef.current) {
+        toastService.auth.loginError(errorMessage, loadingToastRef.current);
+        loadingToastRef.current = null;
+      } else {
+        toastService.auth.loginError(errorMessage);
+      }
     },
 
     retry: false,

@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import checkPasswordResetVerification from './check-password-reset-verification';
 import cooldownStatus from './cooldown-status';
 import forgotPassword from './forgot-password';
 import login from './login';
@@ -11,6 +12,7 @@ import resetPassword from './reset-password';
 import sendOtp from './send-otp';
 import verify from './verify';
 import verifyForgotPassword from './verify-forgot-password';
+import verifyForgotPasswordEnhanced from './verify-forgot-password-enhanced';
 import verifyOtpEnhanced from './verify-otp-enhanced';
 
 const app = new Hono();
@@ -24,6 +26,8 @@ app.route('/resend-verification', resendVerification);
 app.route('/cooldown-status', cooldownStatus);
 app.route('/forgot-password', forgotPassword);
 app.route('/verify-forgot-password', verifyForgotPassword);
+app.route('/verify-forgot-password-enhanced', verifyForgotPasswordEnhanced);
+app.route('/check-password-reset-verification', checkPasswordResetVerification);
 app.route('/reset-password', resetPassword);
 app.route('/refresh-token', refreshToken);
 app.route('/refresh', refreshToken); // Alternative endpoint for frontend compatibility

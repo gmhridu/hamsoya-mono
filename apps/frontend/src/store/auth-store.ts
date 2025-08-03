@@ -21,13 +21,20 @@ export const useAuthStore = create<AuthStore>()(
         error: null,
 
         // Actions with optimistic updates
-        setUser: user =>
+        setUser: user => {
+          // Prevent infinite loops by checking if user is actually different
+          const currentState = get();
+          if (currentState.user === user) {
+            return;
+          }
+
           set({
             user,
             isAuthenticated: !!user,
             error: null,
             isLoading: false,
-          }),
+          });
+        },
 
         clearUser: () =>
           set({
@@ -50,10 +57,7 @@ export const useAuthStore = create<AuthStore>()(
             error: null,
           });
 
-          // Show login success toast
-          if (typeof window !== 'undefined') {
-            toastService.auth.loginSuccess();
-          }
+          // Note: Toast is handled by the login hook to prevent duplicates
         },
 
         logout: () => {
@@ -64,10 +68,7 @@ export const useAuthStore = create<AuthStore>()(
             error: null,
           });
 
-          // Show logout success toast
-          if (typeof window !== 'undefined') {
-            toastService.auth.logoutSuccess();
-          }
+          // Note: Toast is handled by the logout hook to prevent duplicates
         },
 
         updateProfile: updates => {

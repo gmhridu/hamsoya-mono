@@ -54,7 +54,7 @@ export class EnhancedOTPAPI {
   private baseURL: string;
 
   constructor(baseURL?: string) {
-    this.baseURL = baseURL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
+    this.baseURL = baseURL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
   }
 
   private async makeRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -222,22 +222,6 @@ export function useEnhancedCooldownStatus(email: string | null) {
     enabled: false, // DISABLED to prevent duplicate polling
     staleTime: 30000, // 30 seconds
     gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
-  });
-
-      // Intelligent polling intervals
-      if (data.cooldownRemaining <= 10) return 1000; // Last 10 seconds: every second
-      if (data.cooldownRemaining <= 30) return 2000; // Last 30 seconds: every 2 seconds
-      if (data.cooldownRemaining <= 60) return 5000; // Last minute: every 5 seconds
-      return 10000; // Longer cooldowns: every 10 seconds
-    },
-    refetchOnWindowFocus: false,
-    retry: (failureCount, error: any) => {
-      // Don't retry on client errors
-      if (error?.statusCode >= 400 && error?.statusCode < 500) {
-        return false;
-      }
-      return failureCount < 2; // Reduced retry attempts
-    },
   });
 }
 

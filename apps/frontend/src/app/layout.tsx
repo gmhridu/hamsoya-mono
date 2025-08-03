@@ -1,7 +1,6 @@
 import { TokenCleanup } from '@/components/auth/token-cleanup';
 import { TokenRefreshInitializer } from '@/components/auth/token-refresh-initializer';
-import { Footer } from '@/components/layout/footer';
-import { Navbar } from '@/components/layout/navbar';
+import { ConditionalLayout } from '@/components/layout/conditional-layout';
 import { ThemeProvider } from '@/components/layout/theme-provider';
 import { AuthSync } from '@/components/providers/auth-sync';
 import { EnhancedServerStorageProvider } from '@/components/providers/enhanced-server-storage-provider';
@@ -140,12 +139,9 @@ export default async function RootLayout({
                   {/* Storage synchronization for data persistence */}
                   <StorageSyncInitializer />
                   <PageTransition>
-                    <div className="relative flex min-h-screen flex-col">
-                      {/* Server-side auth data is now provided via ServerAuthProvider */}
-                      <Navbar />
-                      <main className="flex-1">{children}</main>
-                      <Footer />
-                    </div>
+                    <ConditionalLayout>
+                      {children}
+                    </ConditionalLayout>
                   </PageTransition>
                 </EnhancedServerStorageProvider>
               </ServerAuthProvider>

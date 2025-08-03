@@ -260,6 +260,7 @@ export async function requireAuth(): Promise<User> {
 /**
  * Get user with fallback to API call if token is invalid
  * Use this if you need to refresh tokens or validate against database
+ * Note: This function cannot set cookies - use getCurrentUserWithRefreshAndCookies for that
  */
 export async function getCurrentUserWithRefresh(): Promise<AuthResult> {
   // First try token-based auth
@@ -293,11 +294,37 @@ export async function getCurrentUserWithRefresh(): Promise<AuthResult> {
 
     const data = await response.json();
 
-    // Note: You'll need to set new cookies here if tokens are refreshed
-    // This is typically done in middleware or API routes
+    // Extract tokens from response
+    const newAccessToken = data.data?.accessToken || data.accessToken;
+    const newRefreshToken = data.data?.refreshToken || data.refreshToken;
+    const user = data.data?.user || data.user;
+
+    // Set new cookies if tokens were refreshed
+    if (newAccessToken && newRefreshToken) {
+      const cookieStore = await cookies();
+      const isProduction = process.env.NODE_ENV === 'production';
+
+      // Set access token (non-httpOnly for API calls)
+      cookieStore.set('accessToken', newAccessToken, {
+        httpOnly: false,
+        secure: isProduction,
+        sameSite: 'strict',
+        maxAge: 5 * 60, // 5 minutes
+        path: '/',
+      });
+
+      // Set refresh token (httpOnly for security)
+      cookieStore.set('refreshToken', newRefreshToken, {
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: 'strict',
+        maxAge: 30 * 24 * 60 * 60, // 30 days
+        path: '/',
+      });
+    }
 
     return {
-      user: data.user,
+      user,
       isAuthenticated: true,
     };
   } catch (error) {

@@ -420,6 +420,69 @@ export function InlineLoader({
   );
 }
 
+/**
+ * Generic page skeleton for non-home pages
+ * Provides a consistent loading experience across the app
+ */
+export function GenericPageSkeleton() {
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto px-4 py-8">
+        {/* Page Header */}
+        <div className="mb-8">
+          <Skeleton className="h-10 w-64 mb-4" />
+          <Skeleton className="h-6 w-96" />
+        </div>
+
+        {/* Main Content */}
+        <div className="space-y-6">
+          {/* Content blocks */}
+          {[...Array(3)].map((_, index) => (
+            <div key={index} className="bg-card rounded-lg p-6 shadow-sm">
+              <Skeleton className="h-6 w-48 mb-4" />
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-5/6" />
+                <Skeleton className="h-4 w-4/5" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Navigation skeleton for when the navbar is loading
+ */
+export function NavbarSkeleton() {
+  return (
+    <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="container mx-auto px-4">
+        <div className="flex h-16 items-center justify-between">
+          {/* Logo */}
+          <Skeleton className="h-8 w-32" />
+
+          {/* Navigation Links */}
+          <div className="hidden md:flex items-center space-x-6">
+            {[...Array(4)].map((_, index) => (
+              <Skeleton key={index} className="h-4 w-16" />
+            ))}
+          </div>
+
+          {/* Right side actions */}
+          <div className="flex items-center space-x-4">
+            <Skeleton className="h-8 w-8 rounded-full" />
+            <Skeleton className="h-8 w-8 rounded-full" />
+            <Skeleton className="h-8 w-8 rounded-full" />
+          </div>
+        </div>
+      </div>
+    </nav>
+  );
+}
+
 // Full page loader overlay
 export function FullPageLoader({ text = 'Loading...' }: { text?: string }) {
   return (

@@ -1,10 +1,16 @@
 /**
- * Home Page - App Router
- * Server-side rendered home page with instant authentication and data hydration
- * Professional UX with zero loading states
+ * Home Page - App Router with Streaming Support
+ * Server-side rendered home page with streaming skeleton loaders for slow connections
+ * Maintains fast performance for good connections while providing loading states for slow ones
  */
 
-import { HomeClient } from '@/components/home/home-client';
+import { Suspense } from 'react';
+import { StreamingHomePage } from '@/components/home/async-home-sections';
+import { HomePageSkeleton } from '@/components/ui/home-skeletons';
+import {
+  OrganizationStructuredData,
+  WebsiteStructuredData,
+} from '@/components/seo/structured-data';
 import { SEO_DEFAULTS } from '@/lib/constants';
 import type { Metadata } from 'next';
 
@@ -38,16 +44,22 @@ export const metadata: Metadata = {
 };
 
 /**
- * Home page with centralized authentication
- * User data provided by ServerAuthProvider - zero API calls, zero loading states
+ * Home page with streaming support and skeleton loaders
+ * - Fast users: Instant rendering with server-side data
+ * - Slow users: Progressive loading with skeleton loaders
+ * - Post-login navigation: Seamless client-side navigation
  */
 export default function HomePage() {
-  // User data is provided by ServerAuthProvider in layout.tsx
-  // No API calls needed - instant authentication state available via useServerAuth()
-
   return (
-    <div className="min-h-screen">
-      <HomeClient />
-    </div>
+    <>
+      {/* Structured Data - Always rendered immediately */}
+      <OrganizationStructuredData page="home" />
+      <WebsiteStructuredData />
+
+      {/* Main content with streaming support */}
+      <Suspense fallback={<HomePageSkeleton />}>
+        <StreamingHomePage />
+      </Suspense>
+    </>
   );
 }

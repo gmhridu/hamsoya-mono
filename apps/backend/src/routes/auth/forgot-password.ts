@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { zValidator } from '../../lib/zod-validator-fix';
 import { AuthService } from '../../services/auth.service';
 import { ForgotPasswordSchema } from '../../types/auth';
+import { AppError } from '../../utils/error-handler';
 import { errorResponse, successResponse } from '../../utils/response-builder';
 
 const app = new Hono();
@@ -18,11 +19,18 @@ app.post('/', zValidator('json', ForgotPasswordSchema), async c => {
   } catch (error) {
     console.error('Forgot password error:', error);
 
-    if (error instanceof Error) {
-      return c.json(errorResponse(error.message), 400);
+    if (error instanceof AppError) {
+      return c.json(
+        errorResponse(error.message, undefined, error.statusCode),
+        error.statusCode as any
+      );
     }
 
-    return c.json(errorResponse('Failed to process forgot password request'), 500);
+    if (error instanceof Error) {
+      return c.json(errorResponse(error.message, undefined, 400), 400);
+    }
+
+    return c.json(errorResponse('Failed to process forgot password request', undefined, 500), 500);
   }
 });
 

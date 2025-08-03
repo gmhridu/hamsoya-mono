@@ -8,7 +8,7 @@
 import { useServerAuth } from '@/components/providers/server-auth-provider';
 import type { AuthGateProps } from '@/types/auth';
 import { useRouter } from 'next/navigation';
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 
 /**
  * AuthGate component for controlling access to routes based on authentication state
@@ -64,8 +64,8 @@ export function AuthGate({
     return true;
   }, [requireAuth, requireGuest, isAuthenticated]);
 
-  // Don't render anything during loading or redirect states (after mount)
-  if (!shouldRender && isMounted) {
+  // Don't render anything during loading or redirect states
+  if (!shouldRender && !isLoading) {
     return fallback;
   }
 

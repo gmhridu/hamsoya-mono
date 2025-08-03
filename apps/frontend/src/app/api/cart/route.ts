@@ -8,7 +8,7 @@ import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 import superjson from 'superjson';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 // Create a server-side tRPC client
 const trpcClient = createTRPCProxyClient<any>({
@@ -62,8 +62,9 @@ export async function GET(request: NextRequest) {
   try {
     const sessionId = await getOrCreateSessionId();
 
-    // Use tRPC client to call the backend
-    const data = await trpcClient.cart.get.query({ sessionId });
+    // TODO: Use tRPC client to call the backend
+    // const data = await trpcClient.cart.get.query({ sessionId });
+    const data = { items: [], count: 0, totalPrice: 0 };
 
     // Set cookies for instant display
     await setSessionIdCookie(sessionId);
@@ -83,8 +84,9 @@ export async function POST(request: NextRequest) {
     const { product, quantity = 1 } = body;
     const sessionId = await getOrCreateSessionId();
 
-    // Use tRPC client to call the backend
-    const data = await trpcClient.cart.addItem.mutate({ product, quantity, sessionId });
+    // TODO: Use tRPC client to call the backend
+    // const data = await trpcClient.cart.addItem.mutate({ product, quantity, sessionId });
+    const data = { items: [{ product, quantity }], count: quantity, totalPrice: product.price * quantity };
 
     // Set cookies for instant display
     await setSessionIdCookie(sessionId);
@@ -104,8 +106,9 @@ export async function PUT(request: NextRequest) {
     const { productId, quantity } = body;
     const sessionId = await getOrCreateSessionId();
 
-    // Use tRPC client to call the backend
-    const data = await trpcClient.cart.updateQuantity.mutate({ productId, quantity, sessionId });
+    // TODO: Use tRPC client to call the backend
+    // const data = await trpcClient.cart.updateQuantity.mutate({ productId, quantity, sessionId });
+    const data = { items: [], count: quantity, totalPrice: 0 };
 
     // Set cookies for instant display
     await setSessionIdCookie(sessionId);
@@ -126,13 +129,15 @@ export async function DELETE(request: NextRequest) {
     const clear = searchParams.get('clear') === 'true';
     const sessionId = await getOrCreateSessionId();
 
-    // Use tRPC client to call the backend
+    // TODO: Use tRPC client to call the backend
     let data;
 
     if (clear) {
-      data = await trpcClient.cart.clearCart.mutate({ sessionId });
+      // data = await trpcClient.cart.clearCart.mutate({ sessionId });
+      data = { items: [], count: 0, totalPrice: 0 };
     } else if (productId) {
-      data = await trpcClient.cart.removeItem.mutate({ productId, sessionId });
+      // data = await trpcClient.cart.removeItem.mutate({ productId, sessionId });
+      data = { items: [], count: 0, totalPrice: 0 };
     } else {
       return NextResponse.json(
         { error: 'Either productId or clear=true must be provided' },

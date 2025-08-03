@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { redirectIfNotAuthenticated } from '@/lib/server-auth';
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {

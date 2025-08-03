@@ -78,6 +78,7 @@ export interface ProductFilters {
   priceRange?: [number, number];
   inStock?: boolean;
   search?: string;
+  featured?: boolean;
   sortBy?: 'name' | 'price' | 'newest' | 'rating';
   sortOrder?: 'asc' | 'desc';
 }

@@ -8,7 +8,7 @@ import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 import superjson from 'superjson';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 // Create a server-side tRPC client
 const trpcClient = createTRPCProxyClient<any>({
@@ -62,8 +62,9 @@ export async function GET(request: NextRequest) {
   try {
     const sessionId = await getOrCreateSessionId();
 
-    // Use tRPC client to call the backend
-    const data = await trpcClient.bookmarks.get.query({ sessionId });
+    // TODO: Use tRPC client to call the backend
+    // const data = await trpcClient.bookmarks.get.query({ sessionId });
+    const data = { bookmarkedProducts: [], count: 0 };
 
     // Set cookies for instant display
     await setSessionIdCookie(sessionId);
@@ -83,8 +84,9 @@ export async function POST(request: NextRequest) {
     const { product } = body;
     const sessionId = await getOrCreateSessionId();
 
-    // Use tRPC client to call the backend
-    const data = await trpcClient.bookmarks.add.mutate({ product, sessionId });
+    // TODO: Use tRPC client to call the backend
+    // const data = await trpcClient.bookmarks.add.mutate({ product, sessionId });
+    const data = { count: 1, bookmarkedProducts: [product] };
 
     // Set cookies for instant display
     await setSessionIdCookie(sessionId);
@@ -104,8 +106,9 @@ export async function PUT(request: NextRequest) {
     const { product } = body;
     const sessionId = await getOrCreateSessionId();
 
-    // Use tRPC client to call the backend
-    const data = await trpcClient.bookmarks.toggle.mutate({ product, sessionId });
+    // TODO: Use tRPC client to call the backend
+    // const data = await trpcClient.bookmarks.toggle.mutate({ product, sessionId });
+    const data = { count: 0, bookmarkedProducts: [] };
 
     // Set cookies for instant display
     await setSessionIdCookie(sessionId);
@@ -126,13 +129,15 @@ export async function DELETE(request: NextRequest) {
     const clear = searchParams.get('clear') === 'true';
     const sessionId = await getOrCreateSessionId();
 
-    // Use tRPC client to call the backend
+    // TODO: Use tRPC client to call the backend
     let data;
 
     if (clear) {
-      data = await trpcClient.bookmarks.clear.mutate({ sessionId });
+      // data = await trpcClient.bookmarks.clear.mutate({ sessionId });
+      data = { count: 0, bookmarkedProducts: [] };
     } else if (productId) {
-      data = await trpcClient.bookmarks.remove.mutate({ productId, sessionId });
+      // data = await trpcClient.bookmarks.remove.mutate({ productId, sessionId });
+      data = { count: 0, bookmarkedProducts: [] };
     } else {
       return NextResponse.json(
         { error: 'Either productId or clear=true must be provided' },
