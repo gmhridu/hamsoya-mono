@@ -15,6 +15,32 @@ import { useMutation } from '@tanstack/react-query';
 import { useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 
+/**
+ * Validate redirect URL based on user role
+ * SECURITY: Prevents unauthorized users from being redirected to admin routes
+ */
+function validateRedirectForUserRole(url: string, userRole?: string): string | null {
+  if (!url || url === '/login') {
+    return null;
+  }
+
+  // Security check: Admin routes only for admin users
+  if (url.startsWith('/admin') && userRole !== 'ADMIN') {
+    return null; // Block admin redirects for non-admin users
+  }
+
+  // Additional security checks
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return null; // Block external redirects
+  }
+
+  if (url.includes('..') || url.includes('//')) {
+    return null; // Block path traversal attempts
+  }
+
+  return url;
+}
+
 // Type for the API response structure
 interface LoginApiResponse {
   success: boolean;
@@ -99,18 +125,31 @@ export function useLogin(): UseLoginReturn {
         // Clear loading state
         setLoading(false);
 
-        // Get redirect URL from current page or default to home
-        const urlParams = new URLSearchParams(window.location.search);
-        const redirectTo = urlParams.get('redirect') || '/';
+        // Update authentication state in ServerAuthProvider
+        // Dispatch login event to notify all auth providers
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('auth:login', {
+            detail: userData
+          }));
+        }
 
-        // Use Next.js router for seamless client-side navigation
-        // This provides smooth navigation with loading states for slow connections
-        handleLoginSuccess(redirectTo);
+        // Start token refresh service for automatic session management
+        import('@/lib/unified-token-refresh').then(({ unifiedTokenRefreshService }) => {
+          unifiedTokenRefreshService.start();
+        }).catch(console.error);
 
         // Clear the loading toast reference after a short delay to ensure toast update completes
         setTimeout(() => {
           loadingToastRef.current = null;
         }, 100);
+
+        // Use client-side navigation for smooth user experience
+        // Get redirect URL from URL params
+        const urlParams = new URLSearchParams(window.location.search);
+        const redirectUrl = urlParams.get('redirect');
+
+        // Use the existing login flow navigation for seamless experience
+        handleLoginSuccess(redirectUrl || undefined, userData.role);
       } catch (error: any) {
         setError('Login succeeded but failed to update user data');
         setLoading(false);

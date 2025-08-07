@@ -20,6 +20,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useRef } from 'react';
+import { useIsAuthenticated } from '@/store/auth-store';
 
 interface CartDrawerProps {
   initialCartCount?: number;
@@ -30,6 +31,8 @@ export function CartDrawer({ initialCartCount = 0 }: CartDrawerProps) {
   const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
   const checkoutToastRef = useRef<string | number | null>(null);
   const router = useRouter();
+  const isAuthenticated = useIsAuthenticated();
+
   const {
     items,
     isOpen,
@@ -52,7 +55,10 @@ export function CartDrawer({ initialCartCount = 0 }: CartDrawerProps) {
 
   // Use store hydration state combined with component hydration state
   const isFullyHydrated = isHydrated && storeIsHydrated;
-  const totalItems = isFullyHydrated ? getTotalItems() : 0;
+
+  // Use server-provided count immediately to prevent flashing, then switch to store count after hydration
+  // This follows the same pattern as navbar user data to eliminate visual flashing
+  const totalItems = isFullyHydrated ? getTotalItems() : initialCartCount;
   const totalPrice = isFullyHydrated ? getTotalPrice() : 0;
 
   // Handle cart open/close state changes
@@ -68,6 +74,15 @@ export function CartDrawer({ initialCartCount = 0 }: CartDrawerProps) {
   const handleCheckout = async () => {
     try {
       setIsCheckoutLoading(true);
+
+      // Check authentication before proceeding
+      if (!isAuthenticated) {
+        // User is not authenticated, redirect to login with checkout as redirect target
+        setIsCheckoutLoading(false);
+        closeCart();
+        router.push('/login?redirect=' + encodeURIComponent('/order'));
+        return;
+      }
 
       // Show loading toast
       checkoutToastRef.current = toastService.checkout.processingCheckout();
@@ -249,7 +264,7 @@ export function CartDrawer({ initialCartCount = 0 }: CartDrawerProps) {
         variant="destructive"
         className="absolute -right-1 -top-1 h-4 w-4 rounded-full p-0 text-xs font-semibold text-white flex items-center justify-center min-w-[1rem] min-h-[1rem]"
       >
-        {isFullyHydrated ? totalItems || 0 : initialCartCount}
+        {totalItems || 0}
       </Badge>
     </Button>
   );

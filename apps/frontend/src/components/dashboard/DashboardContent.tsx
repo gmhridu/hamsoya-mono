@@ -69,7 +69,7 @@ export function DashboardContent({ user }: DashboardContentProps) {
             <Avatar className="h-20 w-20">
               <AvatarImage src={user.profile_image_url} alt={user.name} />
               <AvatarFallback className="text-lg">
-                {user.name
+                {(user.name || user.email)
                   .split(' ')
                   .map(n => n[0])
                   .join('')

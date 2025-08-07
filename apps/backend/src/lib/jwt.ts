@@ -66,6 +66,7 @@ export const verifyAccessToken = (token: string, env?: any): JWTPayload => {
       role: decoded.role,
       profile_image_url: decoded.profile_image_url,
       is_verified: decoded.is_verified,
+      created_at: decoded.created_at,
       iat: decoded.iat,
       exp: decoded.exp,
     };
@@ -96,6 +97,7 @@ export const verifyRefreshToken = (token: string, env?: any): JWTPayload => {
       role: decoded.role,
       profile_image_url: decoded.profile_image_url,
       is_verified: decoded.is_verified,
+      created_at: decoded.created_at,
       iat: decoded.iat,
       exp: decoded.exp,
     };

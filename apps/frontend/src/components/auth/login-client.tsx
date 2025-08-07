@@ -8,8 +8,10 @@ import { ProfileImageUpload } from '@/components/ui/profile-image-upload';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useRegister } from '@/hooks/use-auth';
+import { useOptimizedLogin } from '@/hooks/useOptimizedLogin';
 import { useLogin } from '@/hooks/useLogin';
 import { BRAND_NAME } from '@/lib/constants';
+import { serverLoginAction, serverRegisterAction } from '@/lib/server-auth-actions';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Eye, EyeOff, Loader, Lock, Mail, Phone, User } from 'lucide-react';
 import Link from 'next/link';
@@ -42,19 +44,23 @@ type RegisterFormData = z.infer<typeof RegisterSchema>;
 
 interface LoginClientProps {
   redirectTo?: string;
+  error?: string;
   serverStorage?: any;
 }
 
-export function LoginClient({}: LoginClientProps = {}) {
+export function LoginClient({ redirectTo, error }: LoginClientProps = {}) {
   const [activeTab, setActiveTab] = useState('login');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [profileImageUrl, setProfileImageUrl] = useState<string | undefined>(undefined);
   const [profileImageFileId, setProfileImageFileId] = useState<string | undefined>(undefined);
 
-  // Use client-side hooks for better UX and proper feedback
-  const loginMutation = useLogin();
+  // Use optimized login hook for server-side role-based redirects
+  const optimizedLoginMutation = useOptimizedLogin();
   const registerMutation = useRegister();
+
+  // Fallback to regular login hook if needed
+  const loginMutation = useLogin();
 
   // Login form setup
   const loginForm = useForm<LoginFormData>({
@@ -78,19 +84,58 @@ export function LoginClient({}: LoginClientProps = {}) {
     },
   });
 
-  // Handle login form submission
-  const onLoginSubmit = (data: LoginFormData) => {
-    loginMutation.login(data);
+  // Handle login form submission with server-side redirects
+  const onLoginSubmit = async (data: LoginFormData) => {
+    try {
+      // Use server action for instant server-side redirects
+      await serverLoginAction({
+        email: data.email,
+        password: data.password,
+        redirectTo: redirectTo, // Use provided redirect or role-based default
+      });
+
+      // If we reach here, the server action didn't redirect (unexpected)
+      console.warn('[LOGIN] Server action completed without redirect, falling back to client-side');
+      optimizedLoginMutation.login(data);
+    } catch (error: any) {
+      // NEXT_REDIRECT is expected behavior for server actions - don't treat as error
+      if (error?.message === 'NEXT_REDIRECT' || error?.digest?.startsWith('NEXT_REDIRECT')) {
+        console.log('[LOGIN] Server-side redirect successful');
+        return; // Redirect is happening, don't fallback
+      }
+
+      console.error('Login submission error:', error);
+      // Only fallback to client-side login for actual errors
+      optimizedLoginMutation.login(data);
+    }
   };
 
-  // Handle register form submission
-  const onRegisterSubmit = (data: RegisterFormData) => {
-    const { confirmPassword, ...registerData } = data;
-    registerMutation.mutate({
-      ...registerData,
-      role: 'USER' as const,
-      profile_image_url: profileImageUrl,
-    });
+  // Handle register form submission with server-side redirects
+  const onRegisterSubmit = async (data: RegisterFormData) => {
+    try {
+      const { confirmPassword, ...registerData } = data;
+      // Use server action for instant server-side redirects
+      await serverRegisterAction({
+        ...registerData,
+        profile_image_url: profileImageUrl,
+        redirectTo: undefined,
+      });
+    } catch (error: any) {
+      // NEXT_REDIRECT is expected behavior for server actions - don't treat as error
+      if (error?.message === 'NEXT_REDIRECT' || error?.digest?.startsWith('NEXT_REDIRECT')) {
+        console.log('[REGISTER] Server-side redirect successful');
+        return; // Redirect is happening, don't fallback
+      }
+
+      console.error('Registration submission error:', error);
+      // Only fallback to client-side registration for actual errors
+      const { confirmPassword, ...registerData } = data;
+      registerMutation.mutate({
+        ...registerData,
+        role: 'USER' as const,
+        profile_image_url: profileImageUrl,
+      });
+    }
   };
 
   return (
@@ -124,6 +169,13 @@ export function LoginClient({}: LoginClientProps = {}) {
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               {/* Login Tab */}
               <TabsContent value="login" className="space-y-0">
+                {/* Error message */}
+                {error && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-sm mb-6">
+                    {error}
+                  </div>
+                )}
+
                 <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-6">
                   <div className="space-y-2">
                     <Label htmlFor="login-email" className="text-sm font-medium text-foreground">
@@ -193,9 +245,9 @@ export function LoginClient({}: LoginClientProps = {}) {
                   <Button
                     type="submit"
                     className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-medium transition-colors"
-                    disabled={loginMutation.isLoading}
+                    disabled={optimizedLoginMutation.isLoading}
                   >
-                    {loginMutation.isLoading? (
+                    {optimizedLoginMutation.isLoading? (
                       <>
                         <Loader className="mr-2 h-4 w-4 animate-spin" />
                         Signing in...

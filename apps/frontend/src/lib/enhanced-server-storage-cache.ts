@@ -6,8 +6,9 @@
 
 import { CartItem, Product } from '@/types';
 import { cookies } from 'next/headers';
+import { API_CONFIG, urlBuilder } from './api-config';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const BACKEND_URL = API_CONFIG.backend.base;
 
 // Server-side storage data interfaces
 export interface ServerCartData {
@@ -82,7 +83,7 @@ async function fetchCartData(): Promise<ServerCartData> {
     const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 second timeout
 
     const response = await fetch(
-      `${BACKEND_URL}/trpc/cart.get?input=${encodeURIComponent(JSON.stringify(inputData))}`,
+      urlBuilder.trpc('cart.get', inputData),
       {
         method: 'GET',
         headers: {
@@ -171,7 +172,7 @@ async function fetchBookmarkData(): Promise<ServerBookmarksData> {
     const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 second timeout
 
     const response = await fetch(
-      `${BACKEND_URL}/trpc/bookmarks.get?input=${encodeURIComponent(JSON.stringify(inputData))}`,
+      urlBuilder.trpc('bookmarks.get', inputData),
       {
         method: 'GET',
         headers: {

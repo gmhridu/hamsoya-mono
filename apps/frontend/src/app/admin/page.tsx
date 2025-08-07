@@ -16,5 +16,9 @@ export const metadata: Metadata = {
 };
 
 export default function AdminDashboardPage() {
-  return <AdminDashboardContent />;
+  return (
+    <div className="space-y-6">
+      <AdminDashboardContent />
+    </div>
+  );
 }

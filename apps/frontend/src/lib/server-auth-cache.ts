@@ -52,7 +52,7 @@ async function isAuthenticatedFromCookies(): Promise<boolean> {
 }
 
 /**
- * Fetch user data from API (only when not cached)
+ * Fetch user data directly from backend API (only when not cached)
  */
 async function fetchUserFromAPI(): Promise<CachedUser | null> {
   try {
@@ -63,18 +63,17 @@ async function fetchUserFromAPI(): Promise<CachedUser | null> {
       return null;
     }
 
-    // Build cookie string manually to ensure proper formatting
-    const cookieString = `accessToken=${accessToken}; refreshToken=${
-      cookieStore.get('refreshToken')?.value || ''
-    }`;
+    // Call backend API directly to avoid timeout issues
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/me`, {
+    const response = await fetch(`${backendUrl}/auth/me`, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
-        Cookie: cookieString,
         'Content-Type': 'application/json',
       },
-      cache: 'no-store', // Always fetch fresh data when needed
+      cache: 'no-store',
+      // Add timeout to prevent hanging
+      signal: AbortSignal.timeout(5000), // 5 second timeout
     });
 
     if (!response.ok) {
@@ -93,7 +92,7 @@ async function fetchUserFromAPI(): Promise<CachedUser | null> {
       created_at: user.createdAt || user.created_at || new Date().toISOString(),
     };
   } catch (error) {
-    console.warn('Failed to fetch user from API:', error);
+    console.warn('Failed to fetch user from backend API:', error);
     return null;
   }
 }

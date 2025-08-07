@@ -2,10 +2,10 @@
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { ViewTransitionLink } from '@/components/ui/view-transition-link';
 import { cn } from '@/lib/utils';
 import { ChevronLeft, ChevronRight, ShoppingBag } from 'lucide-react';
 import Image from 'next/image';
-import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
 const heroSlides = [
@@ -117,10 +117,10 @@ export function HeroSection() {
                       size="lg"
                       className="bg-primary hover:bg-primary/90 text-primary-foreground"
                     >
-                      <Link href={slide.href}>
+                      <ViewTransitionLink href={slide.href}>
                         <ShoppingBag className="mr-2 h-5 w-5" />
                         {slide.cta}
-                      </Link>
+                      </ViewTransitionLink>
                     </Button>
                     <Button
                       asChild
@@ -128,10 +128,10 @@ export function HeroSection() {
                       size="lg"
                       className="bg-white/95 text-gray-900 border-2 border-white hover:bg-white hover:text-black shadow-lg backdrop-blur-sm font-medium transition-all duration-300"
                     >
-                      <Link href="/products">
+                      <ViewTransitionLink href="/products">
                         <ShoppingBag className="mr-2 h-4 w-4" />
                         View All Products
-                      </Link>
+                      </ViewTransitionLink>
                     </Button>
                   </div>
                 </>

@@ -211,6 +211,8 @@ class ToastService {
       this.info('Session refreshed', { duration: 1000 })),
     tokenRefreshError: () => this.showOnce('token-refresh-error', () =>
       this.error('Session expired. Please log in again.', { duration: 3000 })),
+    sessionExpired: () => this.showOnce('session-expired', () =>
+      this.warning('Your session has expired. Please log in again.', { duration: 4000 })),
 
     // Forgot password flow
     sendingOTP: () => this.loading('Sending verification code...'),

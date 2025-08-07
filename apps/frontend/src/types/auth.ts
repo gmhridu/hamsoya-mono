@@ -5,7 +5,7 @@
 
 export interface User {
   id: string;
-  name: string;
+  name?: string; // Made optional to match server reality
   email: string;
   role: 'USER' | 'SELLER' | 'ADMIN';
   phone_number?: string;

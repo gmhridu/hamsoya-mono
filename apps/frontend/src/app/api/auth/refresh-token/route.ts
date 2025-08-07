@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 // Refresh access token using refresh token
 export async function POST(request: NextRequest) {
   try {
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
     // Get refresh token from cookies
     const refreshToken = request.cookies.get('refreshToken')?.value;
@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     // Forward cookies to backend
     const cookieHeader = request.headers.get('cookie') || '';
 
-    const response = await fetch(`${backendUrl}/api/auth/refresh-token`, {
+    const response = await fetch(`${backendUrl}/auth/refresh-token`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

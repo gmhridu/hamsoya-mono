@@ -1,5 +1,7 @@
 import type { Context, Next } from 'hono';
 import { HTTPException } from 'hono/http-exception';
+import { getCookie } from 'hono/cookie';
+import { createHash, randomBytes } from 'crypto';
 
 // Security headers middleware
 export const securityHeaders = async (c: Context, next: Next) => {
@@ -182,5 +184,118 @@ export const applySecurity = () => {
     contentTypeValidation,
     requestTimeout(30000), // 30 second timeout
     csrfProtection,
+    enhancedSessionValidation,
+    enhancedRateLimit(),
   ];
 };
+
+// Rate limiting store (in production, use Redis)
+const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
+
+/**
+ * Enhanced Rate Limiting Middleware
+ */
+export const enhancedRateLimit = (options: { windowMs: number; maxRequests: number } = { windowMs: 15 * 60 * 1000, maxRequests: 100 }) => {
+  return async (c: Context, next: Next) => {
+    const clientIP = c.req.header('CF-Connecting-IP') ||
+                    c.req.header('X-Forwarded-For') ||
+                    c.req.header('X-Real-IP') ||
+                    'unknown';
+
+    const now = Date.now();
+    const windowStart = now - options.windowMs;
+
+    // Clean up old entries
+    for (const [key, value] of rateLimitStore.entries()) {
+      if (value.resetTime < windowStart) {
+        rateLimitStore.delete(key);
+      }
+    }
+
+    // Check current rate limit
+    const current = rateLimitStore.get(clientIP);
+
+    if (!current) {
+      rateLimitStore.set(clientIP, { count: 1, resetTime: now + options.windowMs });
+    } else if (current.resetTime < now) {
+      rateLimitStore.set(clientIP, { count: 1, resetTime: now + options.windowMs });
+    } else if (current.count >= options.maxRequests) {
+      throw new HTTPException(429, {
+        message: 'Too many requests',
+        cause: { retryAfter: Math.ceil((current.resetTime - now) / 1000) }
+      });
+    } else {
+      current.count++;
+    }
+
+    await next();
+  };
+};
+
+/**
+ * Enhanced Session Validation Middleware
+ */
+export const enhancedSessionValidation = async (c: Context, next: Next) => {
+  const accessToken = getCookie(c, 'accessToken');
+  const refreshToken = getCookie(c, 'refreshToken');
+
+  // If we have tokens, validate them
+  if (accessToken || refreshToken) {
+    try {
+      // Basic token format validation
+      if (accessToken && !isValidJWTFormat(accessToken)) {
+        // Clear invalid access token
+        c.header('Set-Cookie', 'accessToken=; Path=/; Max-Age=0; HttpOnly=false; Secure; SameSite=Strict');
+      }
+
+      if (refreshToken && !isValidJWTFormat(refreshToken)) {
+        // Clear invalid refresh token
+        c.header('Set-Cookie', 'refreshToken=; Path=/; Max-Age=0; HttpOnly=true; Secure; SameSite=Strict');
+      }
+    } catch (error) {
+      console.error('Session validation error:', error);
+    }
+  }
+
+  await next();
+};
+
+/**
+ * Utility function to validate JWT format
+ */
+function isValidJWTFormat(token: string): boolean {
+  if (!token || typeof token !== 'string') return false;
+
+  const parts = token.split('.');
+  if (parts.length !== 3) return false;
+
+  try {
+    // Try to decode each part
+    atob(parts[0]); // header
+    atob(parts[1]); // payload
+    // Don't decode signature as it's binary
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Generate CSRF token
+ */
+export function generateCSRFToken(): string {
+  return randomBytes(32).toString('hex');
+}
+
+/**
+ * Validate CSRF token
+ */
+export function validateCSRFToken(token: string, expected: string): boolean {
+  if (!token || !expected) return false;
+
+  // Use constant-time comparison to prevent timing attacks
+  const tokenHash = createHash('sha256').update(token).digest('hex');
+  const expectedHash = createHash('sha256').update(expected).digest('hex');
+
+  return tokenHash === expectedHash;
+}

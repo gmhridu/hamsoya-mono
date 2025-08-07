@@ -2,9 +2,9 @@ import { TokenCleanup } from '@/components/auth/token-cleanup';
 import { TokenRefreshInitializer } from '@/components/auth/token-refresh-initializer';
 import { ConditionalLayout } from '@/components/layout/conditional-layout';
 import { ThemeProvider } from '@/components/layout/theme-provider';
-import { AuthSync } from '@/components/providers/auth-sync';
+
 import { EnhancedServerStorageProvider } from '@/components/providers/enhanced-server-storage-provider';
-import { ServerAuthProvider } from '@/components/providers/server-auth-provider';
+import { AuthHydrationProvider } from '@/components/providers/auth-hydration-provider';
 import { StorageSync } from '@/components/providers/storage-sync';
 import { TRPCProvider } from '@/components/providers/trpc-provider';
 import { ChunkErrorBoundary } from '@/components/ui/chunk-error-boundary';
@@ -12,7 +12,7 @@ import { PageTransition } from '@/components/ui/smooth-transition';
 import { Toaster } from '@/components/ui/sonner';
 import { SEO_DEFAULTS } from '@/lib/constants';
 import { getServerStorageData } from '@/lib/enhanced-server-storage-cache';
-import { getCurrentUserInstant } from '@/lib/server-auth-cache';
+import { getServerAuthState } from '@/lib/server-auth-state';
 import { StorageSyncInitializer } from '@/lib/unified-storage-sync';
 import type { Metadata } from 'next';
 import { Playfair_Display, PT_Sans } from 'next/font/google';
@@ -31,6 +31,9 @@ const ptSans = PT_Sans({
   weight: ['400', '700'],
   display: 'swap',
 });
+
+// Enable native View Transitions for smooth navigation
+export const unstable_viewTransition = true;
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
@@ -109,7 +112,8 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const { user, isAuthenticated } = await getCurrentUserInstant();
+  // Get server-side authentication state to eliminate client-side API calls
+  const serverAuthState = await getServerAuthState();
 
   const serverStorage = await getServerStorageData();
 
@@ -124,7 +128,7 @@ export default async function RootLayout({
               enableSystem
               disableTransitionOnChange
             >
-              <ServerAuthProvider user={user} isAuthenticated={isAuthenticated}>
+              <AuthHydrationProvider serverAuthState={serverAuthState}>
                 <EnhancedServerStorageProvider
                   cart={serverStorage.cart}
                   bookmarks={serverStorage.bookmarks}
@@ -132,8 +136,6 @@ export default async function RootLayout({
                   {/* Automatic token cleanup and refresh */}
                   <TokenCleanup />
                   <TokenRefreshInitializer />
-                  {/* Authentication state synchronization */}
-                  <AuthSync />
                   {/* Storage state synchronization */}
                   <StorageSync />
                   {/* Storage synchronization for data persistence */}
@@ -144,7 +146,7 @@ export default async function RootLayout({
                     </ConditionalLayout>
                   </PageTransition>
                 </EnhancedServerStorageProvider>
-              </ServerAuthProvider>
+              </AuthHydrationProvider>
               <Toaster />
             </ThemeProvider>
           </TRPCProvider>

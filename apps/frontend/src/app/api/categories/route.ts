@@ -58,9 +58,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
-    const response = await fetch(`${backendUrl}/api/categories`, {
+    const response = await fetch(`${backendUrl}/categories`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

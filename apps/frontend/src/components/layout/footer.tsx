@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { ViewTransitionLink } from '@/components/ui/view-transition-link';
 import { Facebook, Instagram, Mail, MapPin, Phone, Twitter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,30 +12,30 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Brand & Description */}
           <div className="space-y-4">
-            <Link href="/" className="flex items-center space-x-2">
+            <ViewTransitionLink href="/" className="flex items-center space-x-2">
               <div className="h-8 w-8 rounded-full bg-gradient-to-r from-primary to-accent" />
               <span className="font-serif text-xl font-bold text-primary">
                 {BRAND_NAME}
               </span>
-            </Link>
+            </ViewTransitionLink>
             <p className="text-sm text-muted-foreground leading-relaxed">
               {COMPANY_INFO.description}
             </p>
             <div className="flex space-x-2">
               <Button variant="outline" size="icon" asChild>
-                <Link href={COMPANY_INFO.socialMedia.facebook} target="_blank">
+                <ViewTransitionLink href={COMPANY_INFO.socialMedia.facebook} target="_blank">
                   <Facebook className="h-4 w-4" />
-                </Link>
+                </ViewTransitionLink>
               </Button>
               <Button variant="outline" size="icon" asChild>
-                <Link href={COMPANY_INFO.socialMedia.instagram} target="_blank">
+                <ViewTransitionLink href={COMPANY_INFO.socialMedia.instagram} target="_blank">
                   <Instagram className="h-4 w-4" />
-                </Link>
+                </ViewTransitionLink>
               </Button>
               <Button variant="outline" size="icon" asChild>
-                <Link href={COMPANY_INFO.socialMedia.twitter} target="_blank">
+                <ViewTransitionLink href={COMPANY_INFO.socialMedia.twitter} target="_blank">
                   <Twitter className="h-4 w-4" />
-                </Link>
+                </ViewTransitionLink>
               </Button>
             </div>
           </div>
@@ -45,26 +45,26 @@ export function Footer() {
             <h3 className="font-semibold">Quick Links</h3>
             <nav className="space-y-2">
               {NAVIGATION_ITEMS.map((item) => (
-                <Link
+                <ViewTransitionLink
                   key={item.href}
                   href={item.href}
                   className="block text-sm text-muted-foreground hover:text-primary transition-colors"
                 >
                   {item.name}
-                </Link>
+                </ViewTransitionLink>
               ))}
-              <Link
+              <ViewTransitionLink
                 href="/privacy"
                 className="block text-sm text-muted-foreground hover:text-primary transition-colors"
               >
                 Privacy Policy
-              </Link>
-              <Link
+              </ViewTransitionLink>
+              <ViewTransitionLink
                 href="/terms"
                 className="block text-sm text-muted-foreground hover:text-primary transition-colors"
               >
                 Terms of Service
-              </Link>
+              </ViewTransitionLink>
             </nav>
           </div>
 

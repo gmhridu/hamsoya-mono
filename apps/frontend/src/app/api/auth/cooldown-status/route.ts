@@ -5,7 +5,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const email = searchParams.get('email');
-    
+
     if (!email) {
       return NextResponse.json(
         { error: 'Email parameter is required' },
@@ -14,8 +14,8 @@ export async function GET(request: NextRequest) {
     }
 
     const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-    
-    const response = await fetch(`${backendUrl}/api/auth/cooldown-status?email=${encodeURIComponent(email)}`, {
+
+    const response = await fetch(`${backendUrl}/auth/cooldown-status?email=${encodeURIComponent(email)}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -25,9 +25,9 @@ export async function GET(request: NextRequest) {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       return NextResponse.json(
-        { 
+        {
           error: errorData.message || 'Failed to get cooldown status',
-          details: errorData 
+          details: errorData
         },
         { status: response.status }
       );
@@ -37,9 +37,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(data);
   } catch (error) {
     console.error('Cooldown status GET API error:', error);
-    
+
     return NextResponse.json(
-      { 
+      {
         error: 'Internal server error',
         message: error instanceof Error ? error.message : 'Unknown error'
       },
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { email } = body;
-    
+
     if (!email) {
       return NextResponse.json(
         { error: 'Email is required' },
@@ -62,8 +62,8 @@ export async function POST(request: NextRequest) {
     }
 
     const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-    
-    const response = await fetch(`${backendUrl}/api/auth/cooldown-status`, {
+
+    const response = await fetch(`${backendUrl}/auth/cooldown-status`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -74,9 +74,9 @@ export async function POST(request: NextRequest) {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       return NextResponse.json(
-        { 
+        {
           error: errorData.message || 'Failed to get cooldown status',
-          details: errorData 
+          details: errorData
         },
         { status: response.status }
       );
@@ -86,9 +86,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(data);
   } catch (error) {
     console.error('Cooldown status POST API error:', error);
-    
+
     return NextResponse.json(
-      { 
+      {
         error: 'Internal server error',
         message: error instanceof Error ? error.message : 'Unknown error'
       },

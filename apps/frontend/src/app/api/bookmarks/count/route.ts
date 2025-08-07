@@ -5,8 +5,9 @@
 
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
+import { API_CONFIG } from '@/lib/api-config';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const BACKEND_URL = API_CONFIG.backend.base;
 
 // Helper function to get session ID from cookies
 async function getSessionId(): Promise<string | undefined> {

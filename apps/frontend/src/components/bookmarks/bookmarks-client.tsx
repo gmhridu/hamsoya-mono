@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import Link from 'next/link';
+import { useState, useEffect } from 'react';
+import { ViewTransitionLink } from '@/components/ui/view-transition-link';
 import { Heart, ShoppingBag, Trash2, Grid, List } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -10,11 +10,22 @@ import { ProductCard } from '@/components/products/product-card';
 import { useBookmarksStore } from '@/store';
 import { cn } from '@/lib/utils';
 
-export function BookmarksClient() {
+interface BookmarksClientProps {
+  initialBookmarkCount?: number;
+}
+
+export function BookmarksClient({ initialBookmarkCount = 0 }: BookmarksClientProps) {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const { bookmarkedProducts, clearBookmarks, getBookmarkCount } = useBookmarksStore();
-  
-  const bookmarkCount = getBookmarkCount();
+  const [isHydrated, setIsHydrated] = useState(false);
+  const { bookmarkedProducts, clearBookmarks, getBookmarkCount, isHydrated: storeIsHydrated } = useBookmarksStore();
+
+  // Handle component hydration
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
+
+  // Use server-provided count initially to prevent flashing, then switch to store count after hydration
+  const bookmarkCount = isHydrated && storeIsHydrated ? getBookmarkCount() : initialBookmarkCount;
 
   const handleClearAll = () => {
     if (confirm('Are you sure you want to remove all bookmarks?')) {
@@ -32,13 +43,13 @@ export function BookmarksClient() {
               My Bookmarks
             </h1>
             <p className="text-lg text-muted-foreground">
-              {bookmarkCount > 0 
+              {bookmarkCount > 0
                 ? `${bookmarkCount} saved ${bookmarkCount === 1 ? 'product' : 'products'}`
                 : 'No bookmarked products yet'
               }
             </p>
           </div>
-          
+
           {bookmarkCount > 0 && (
             <div className="flex items-center gap-2">
               {/* View Mode Toggle */}
@@ -58,7 +69,7 @@ export function BookmarksClient() {
                   <List className="h-4 w-4" />
                 </Button>
               </div>
-              
+
               <Button
                 variant="outline"
                 size="sm"
@@ -94,15 +105,15 @@ export function BookmarksClient() {
                 Start exploring our products and bookmark your favorites to see them here.
               </p>
             </div>
-            
+
             <div className="space-y-4">
               <Button asChild size="lg">
-                <Link href="/products">
+                <ViewTransitionLink href="/products">
                   <ShoppingBag className="mr-2 h-5 w-5" />
                   Browse Products
-                </Link>
+                </ViewTransitionLink>
               </Button>
-              
+
               <div className="text-sm text-muted-foreground">
                 <p>💡 Tip: Click the heart icon on any product to bookmark it</p>
               </div>
@@ -112,13 +123,13 @@ export function BookmarksClient() {
       ) : (
         <div className={cn(
           'grid gap-6',
-          viewMode === 'grid' 
+          viewMode === 'grid'
             ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
             : 'grid-cols-1'
         )}>
           {bookmarkedProducts.map((product) => (
-            <ProductCard 
-              key={product.id} 
+            <ProductCard
+              key={product.id}
               product={product}
               className={viewMode === 'list' ? 'flex-row' : ''}
             />
@@ -136,9 +147,9 @@ export function BookmarksClient() {
                 Add your bookmarked products to cart and place your order with cash on delivery.
               </p>
               <Button asChild className="w-full">
-                <Link href="/products">
+                <ViewTransitionLink href="/products">
                   Continue Shopping
-                </Link>
+                </ViewTransitionLink>
               </Button>
             </CardContent>
           </Card>

@@ -297,24 +297,25 @@ export function ProductsManagement() {
 
   return (
     <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle>Products</CardTitle>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm">
+      <CardHeader className="p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
+          <CardTitle className="text-lg sm:text-xl">Products</CardTitle>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <Button variant="outline" size="sm" className="flex-1 sm:flex-none min-h-[44px]">
               <Download className="mr-2 h-4 w-4" />
-              Export
+              <span className="hidden sm:inline">Export</span>
             </Button>
-            <Button size="sm">
+            <Button size="sm" className="flex-1 sm:flex-none min-h-[44px]">
               <Plus className="mr-2 h-4 w-4" />
-              Add Product
+              <span className="hidden sm:inline">Add Product</span>
+              <span className="sm:hidden">Add</span>
             </Button>
           </div>
         </div>
       </CardHeader>
-      <CardContent>
-        {/* Filters */}
-        <div className="flex flex-col lg:flex-row gap-4 mb-6">
+      <CardContent className="p-4 sm:p-6">
+        {/* Filters - Responsive layout */}
+        <div className="flex flex-col gap-3 sm:gap-4 mb-4 sm:mb-6">
           <div className="flex-1">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -322,13 +323,13 @@ export function ProductsManagement() {
                 placeholder="Search products by name, description, or ID..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-10 h-10"
               />
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-[150px]">
+              <SelectTrigger className="w-full sm:w-[150px] h-10">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -340,7 +341,7 @@ export function ProductsManagement() {
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[130px]">
+              <SelectTrigger className="w-full sm:w-[130px] h-10">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -372,6 +373,7 @@ export function ProductsManagement() {
           columns={productColumns}
           searchable={false}
           emptyMessage="No products found"
+          keyField="id"
         />
       </CardContent>
     </Card>

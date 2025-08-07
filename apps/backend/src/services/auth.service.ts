@@ -90,21 +90,15 @@ export class AuthService {
     const userName = name || registrationData?.name || user?.name || 'User';
 
     // Send email using optimized enhanced templates
-    const emailStart = Date.now();
-
     try {
       // Always use professional EJS email templates for consistent branding
       const { sendEnhancedOTPVerificationEmail } = require('../lib/sendEmail');
       await sendEnhancedOTPVerificationEmail(email, userName, otp, this.env);
 
-      const emailTime = Date.now() - emailStart;
     } catch (error) {
-      const emailTime = Date.now() - emailStart;
-
       // Fallback to legacy email template if EJS fails
       try {
         await sendOTPVerificationEmail(email, userName, otp, this.env);
-        const fallbackTime = Date.now() - emailStart;
       } catch (fallbackError) {
         // In development, still provide helpful feedback
         if (process.env.NODE_ENV === 'development') {
@@ -224,6 +218,7 @@ export class AuthService {
       role: user.role as UserRole,
       profile_image_url: user.profile_image_url || undefined,
       is_verified: user.is_verified,
+      created_at: user.created_at.toISOString(),
     };
 
     const accessToken = generateAccessToken(tokenPayload, this.env);
@@ -298,6 +293,7 @@ export class AuthService {
         role: user.role as UserRole,
         profile_image_url: user.profile_image_url || undefined,
         is_verified: user.is_verified,
+        created_at: user.created_at.toISOString(),
       };
 
       const newAccessToken = generateAccessToken(tokenPayload, this.env);
@@ -486,7 +482,7 @@ export class AuthService {
     await this.redis.cleanup(email, 'password_reset');
 
     // Security audit logging for successful verification
-    await securityAudit.logOTPVerified(email, clientIP, undefined, 'password_reset');
+    await securityAudit.logOTPVerified(email, clientIP, undefined);
 
     return {
       message: 'OTP verified successfully. You can now reset your password.',
@@ -653,16 +649,11 @@ export class AuthService {
     const userName = registrationData?.name || user?.name || 'User';
 
     // Send email using optimized enhanced template
-    const emailStart = Date.now();
-
     try {
       // Always use professional EJS email templates for consistent branding
       const { sendEnhancedOTPVerificationEmail } = require('../lib/sendEmail');
       await sendEnhancedOTPVerificationEmail(email, userName, otp, this.env);
-
-      const emailTime = Date.now() - emailStart;
     } catch (enhancedError) {
-      const emailTime = Date.now() - emailStart;
       await sendOTPVerificationEmail(email, userName, otp, this.env);
     }
 

@@ -1,9 +1,9 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ViewTransitionLink } from '@/components/ui/view-transition-link';
 import { BRAND_NAME, NAVIGATION_ITEMS } from '@/lib/constants';
 import { ArrowLeft, Home, Search, ShoppingBag } from 'lucide-react';
 import { Metadata } from 'next';
-import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: `Page Not Found | ${BRAND_NAME}`,
@@ -40,16 +40,16 @@ export default function NotFound() {
           {/* Primary Actions */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Button asChild size="lg" className="w-full">
-              <Link href="/">
+              <ViewTransitionLink href="/">
                 <Home className="mr-2 h-4 w-4" />
                 Go Home
-              </Link>
+              </ViewTransitionLink>
             </Button>
             <Button asChild variant="outline" size="lg" className="w-full">
-              <Link href="/products">
+              <ViewTransitionLink href="/products">
                 <ShoppingBag className="mr-2 h-4 w-4" />
                 Browse Products
-              </Link>
+              </ViewTransitionLink>
             </Button>
           </div>
 
@@ -61,10 +61,10 @@ export default function NotFound() {
             <div className="grid grid-cols-2 gap-2">
               {NAVIGATION_ITEMS.slice(1).map(item => (
                 <Button key={item.href} asChild variant="ghost" size="sm" className="justify-start">
-                  <Link href={item.href}>
+                  <ViewTransitionLink href={item.href}>
                     <ArrowLeft className="mr-2 h-3 w-3" />
                     {item.name}
-                  </Link>
+                  </ViewTransitionLink>
                 </Button>
               ))}
             </div>
@@ -74,12 +74,12 @@ export default function NotFound() {
           <div className="text-center pt-4 border-t">
             <p className="text-sm text-muted-foreground">
               Need help? Contact us at{' '}
-              <Link
+              <ViewTransitionLink
                 href="/contact-us"
                 className="text-primary hover:text-primary/80 font-medium transition-colors"
               >
                 our support page
-              </Link>
+              </ViewTransitionLink>
             </p>
           </div>
         </CardContent>

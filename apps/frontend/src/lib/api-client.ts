@@ -1,5 +1,7 @@
 // Simple API client for making requests to the Next.js API routes
 
+import { API_CONFIG, urlBuilder } from './api-config';
+
 const API_BASE_URL = '/api';
 
 // Custom error class for API errors
@@ -150,7 +152,7 @@ class ApiClient {
 
   private async performTokenRefresh(): Promise<boolean> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/auth/refresh-token`, {
+      const response = await fetch(API_CONFIG.frontend.auth.refreshToken, {
         method: 'POST',
         credentials: 'same-origin',
       });

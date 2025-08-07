@@ -7,6 +7,11 @@
 
 import { enhanceMiddlewareWithStorage } from '@/lib/server-storage-middleware';
 import { checkAuthenticationWithRefresh } from '@/lib/server-token-validator';
+import {
+  extractUserRoleFromRequest,
+  getRoleBasedRedirectUrl,
+  getRedirectFromRequest
+} from '@/lib/server-jwt-decoder';
 import { NextRequest, NextResponse } from 'next/server';
 
 // Routes that require authentication - instant redirect to login if not authenticated
@@ -64,16 +69,24 @@ function getRedirectUrl(request: NextRequest): string | null {
 
 /**
  * Create instant redirect response with optimized headers
- * Ensures immediate navigation without caching issues
+ * Ensures immediate navigation without caching issues and prevents any content rendering
  */
 function createInstantRedirect(url: string, request: NextRequest): NextResponse {
-  const response = NextResponse.redirect(new URL(url, request.url), 307); // Temporary redirect
+  const response = NextResponse.redirect(new URL(url, request.url), 302); // Found redirect for instant response
 
   // Headers for instant navigation and no caching
-  response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate, private');
+  response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate, private, max-age=0');
   response.headers.set('Pragma', 'no-cache');
   response.headers.set('Expires', '0');
   response.headers.set('X-Robots-Tag', 'noindex, nofollow');
+
+  // Additional headers to prevent any content rendering
+  response.headers.set('X-Content-Type-Options', 'nosniff');
+  response.headers.set('X-Frame-Options', 'DENY');
+  response.headers.set('Referrer-Policy', 'no-referrer');
+
+  // Ensure immediate redirect without any delay
+  response.headers.set('Location', new URL(url, request.url).toString());
 
   return response;
 }
@@ -83,6 +96,101 @@ function createInstantRedirect(url: string, request: NextRequest): NextResponse 
  */
 function addPathnameHeader(response: NextResponse, pathname: string): NextResponse {
   response.headers.set('x-pathname', pathname);
+  return response;
+}
+
+/**
+ * Clear all authentication cookies and session data
+ * Enhanced for comprehensive security cleanup with immediate effect
+ */
+function clearAllAuthCookies(response: NextResponse): void {
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  // Clear access token with multiple approaches for immediate effect
+  response.cookies.set('accessToken', '', {
+    httpOnly: false,
+    maxAge: 0,
+    expires: new Date(0),
+    path: '/',
+    secure: isProduction,
+    sameSite: 'strict',
+  });
+
+  // Clear refresh token with immediate expiration
+  response.cookies.set('refreshToken', '', {
+    httpOnly: true,
+    maxAge: 0,
+    expires: new Date(0),
+    path: '/',
+    secure: isProduction,
+    sameSite: 'strict',
+  });
+
+  // Also try alternative cookie names that might exist
+  response.cookies.set('refresh_token', '', {
+    httpOnly: true,
+    maxAge: 0,
+    expires: new Date(0),
+    path: '/',
+    secure: isProduction,
+    sameSite: 'strict',
+  });
+
+  response.cookies.set('access_token', '', {
+    httpOnly: false,
+    maxAge: 0,
+    expires: new Date(0),
+    path: '/',
+    secure: isProduction,
+    sameSite: 'strict',
+  });
+
+  // Clear any session cookies
+  response.cookies.set('session_id', '', {
+    httpOnly: false,
+    maxAge: 0,
+    expires: new Date(0),
+    path: '/',
+  });
+
+  // Clear any other auth-related cookies
+  response.cookies.set('user_role', '', {
+    httpOnly: false,
+    maxAge: 0,
+    expires: new Date(0),
+    path: '/',
+  });
+
+  // Clear cart and bookmark count cookies for security
+  response.cookies.set('cart_count', '', {
+    httpOnly: false,
+    maxAge: 0,
+    expires: new Date(0),
+    path: '/',
+  });
+
+  response.cookies.set('bookmark_count', '', {
+    httpOnly: false,
+    maxAge: 0,
+    expires: new Date(0),
+    path: '/',
+  });
+}
+
+/**
+ * Create secure logout redirect with complete auth cleanup
+ * Used when non-admin users try to access admin routes
+ */
+function createSecureLogoutRedirect(request: NextRequest, message?: string): NextResponse {
+  const loginUrl = new URL('/login', request.url);
+
+  if (message) {
+    loginUrl.searchParams.set('error', message);
+  }
+
+  const response = createInstantRedirect(loginUrl.toString(), request);
+  clearAllAuthCookies(response);
+
   return response;
 }
 
@@ -103,7 +211,43 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Handle public routes first (including specific admin test routes)
+  // PRIORITY 1: Handle admin routes FIRST with optimized security checks
+  // This prevents any content rendering for unauthorized users
+  if (pathname.startsWith('/admin')) {
+    // OPTIMIZATION: Fast JWT role extraction first (no database calls)
+    const roleInfo = extractUserRoleFromRequest(request);
+
+    if (!roleInfo.isAuthenticated || roleInfo.role !== 'ADMIN') {
+      // Fast rejection for non-admin users
+      const loginUrl = `/login?error=${encodeURIComponent('Admin access required')}`;
+      const response = createInstantRedirect(loginUrl, request);
+      clearAllAuthCookies(response);
+      return response;
+    }
+
+    // For admin users, do full authentication check with refresh
+    const authResult = await isAuthenticatedWithRefresh(request);
+
+    if (!authResult.isAuthenticated) {
+      const loginUrl = `/login?error=${encodeURIComponent('Authentication required')}`;
+      const response = createInstantRedirect(loginUrl, request);
+      clearAllAuthCookies(response);
+      return response;
+    }
+
+    if (!authResult.userRole || authResult.userRole !== 'ADMIN') {
+      const loginUrl = `/login?error=${encodeURIComponent('Insufficient permissions. Access denied.')}`;
+      const response = createInstantRedirect(loginUrl, request);
+      clearAllAuthCookies(response);
+      return response;
+    }
+
+    // Admin user with valid authentication - allow access
+    const response = authResult.response || NextResponse.next();
+    return addPathnameHeader(response, pathname);
+  }
+
+  // Handle public routes (only after admin routes are secured)
   if (PUBLIC_ROUTES.some(route => pathname.startsWith(route)) || pathname === '/') {
     // For public routes, we still want to refresh tokens if possible for better UX
     const authResult = await isAuthenticatedWithRefresh(request);
@@ -117,30 +261,27 @@ export async function middleware(request: NextRequest) {
     return addPathnameHeader(enhanceMiddlewareWithStorage(request, NextResponse.next()), pathname);
   }
 
-  // Handle protected routes with enhanced authentication
+  // Handle other protected routes with enhanced authentication
   if (PROTECTED_ROUTES.some(route => pathname.startsWith(route))) {
     const authResult = await isAuthenticatedWithRefresh(request);
 
+    // Issue 1: Unauthenticated user access control
     if (!authResult.isAuthenticated) {
-      // Redirect to login with return URL
+      // Clear any stale cookies and redirect to login with return URL
       const loginUrl = `/login?redirect=${encodeURIComponent(pathname)}`;
-      return createInstantRedirect(loginUrl, request);
+      const response = createInstantRedirect(loginUrl, request);
+      clearAllAuthCookies(response);
+      return response;
     }
 
-    // Check if this is an admin route and user has admin role
-    if (pathname.startsWith('/admin')) {
-      if (authResult.userRole !== 'ADMIN') {
-        // Non-admin user trying to access admin routes - redirect to home
-        return createInstantRedirect('/', request);
-      }
-    }
+    // Admin routes are handled above with priority - skip here
 
     // Check if admin user is trying to access regular dashboard - redirect to admin dashboard
     if (pathname.startsWith('/dashboard') && authResult.userRole === 'ADMIN') {
       return createInstantRedirect('/admin', request);
     }
 
-    // User is authenticated and has proper role, return the response (which may include new tokens)
+    // User is authenticated and has proper role for non-admin protected routes
     const response = authResult.response || NextResponse.next();
     return addPathnameHeader(response, pathname);
   }
@@ -160,32 +301,53 @@ export async function middleware(request: NextRequest) {
 
   // Handle guest-only routes (login, register, etc.)
   if (GUEST_ONLY_ROUTES.some(route => pathname.startsWith(route))) {
-    const authResult = await isAuthenticatedWithRefresh(request);
-
-    if (authResult.isAuthenticated) {
-      // Check if there's a redirect URL from login flow
-      const redirectUrl = getRedirectUrl(request);
-
-      // Determine destination based on user role
-      let destination: string;
-      if (authResult.userRole === 'ADMIN') {
-        destination = redirectUrl || '/admin';
-      } else {
-        destination = redirectUrl || '/';
-      }
-
-      const redirectResponse = createInstantRedirect(destination, request);
-
-      // If we have new tokens from refresh, preserve them in the redirect
-      if (authResult.response) {
-        const cookies = authResult.response.cookies.getAll();
-        cookies.forEach(cookie => {
-          redirectResponse.cookies.set(cookie.name, cookie.value, cookie);
-        });
-      }
-
-      return redirectResponse;
+    // Skip middleware checks for POST requests to avoid interfering with server actions
+    if (request.method === 'POST') {
+      return addPathnameHeader(NextResponse.next(), pathname);
     }
+
+    // OPTIMIZATION: Use fast JWT decoding for immediate role-based redirects
+    // This ensures users are redirected BEFORE HTML loads for ChatGPT-style performance
+    const roleInfo = extractUserRoleFromRequest(request);
+
+    if (roleInfo.isAuthenticated && roleInfo.role) {
+      // Fast server-side role-based redirect without database calls
+      const requestedRedirect = getRedirectFromRequest(request);
+      const destination = getRoleBasedRedirectUrl(roleInfo.role, requestedRedirect || undefined);
+
+      console.log(`[MIDDLEWARE] Instant role-based redirect: ${roleInfo.role} -> ${destination}`);
+
+      // Instant redirect before HTML loads
+      return createInstantRedirect(destination, request);
+    }
+
+    // If token is expired or invalid, fall back to full auth check for token refresh
+    if (roleInfo.isExpired) {
+      const authResult = await isAuthenticatedWithRefresh(request);
+
+      if (authResult.isAuthenticated) {
+        // After token refresh, get role and redirect
+        const refreshedRoleInfo = extractUserRoleFromRequest(request);
+        const requestedRedirect = getRedirectFromRequest(request);
+        const destination = getRoleBasedRedirectUrl(
+          refreshedRoleInfo.role || 'USER',
+          requestedRedirect || undefined
+        );
+
+        const redirectResponse = createInstantRedirect(destination, request);
+
+        // Preserve refreshed tokens in the redirect
+        if (authResult.response) {
+          const cookies = authResult.response.cookies.getAll();
+          cookies.forEach(cookie => {
+            redirectResponse.cookies.set(cookie.name, cookie.value, cookie);
+          });
+        }
+
+        return redirectResponse;
+      }
+    }
+
     // User is not authenticated, allow access to guest routes
     return addPathnameHeader(NextResponse.next(), pathname);
   }

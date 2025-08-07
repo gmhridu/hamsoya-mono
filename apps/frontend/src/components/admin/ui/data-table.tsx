@@ -29,6 +29,7 @@ interface DataTableProps<T> {
   pageSize?: number;
   className?: string;
   emptyMessage?: string;
+  keyField?: keyof T | string;
 }
 
 export function DataTable<T extends Record<string, any>>({
@@ -39,6 +40,7 @@ export function DataTable<T extends Record<string, any>>({
   pageSize = 10,
   className,
   emptyMessage = 'No data available',
+  keyField,
 }: DataTableProps<T>) {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -75,6 +77,15 @@ export function DataTable<T extends Record<string, any>>({
   const startIndex = (currentPage - 1) * pageSize;
   const paginatedData = sortedData.slice(startIndex, startIndex + pageSize);
 
+  // Generate unique key for each row
+  const getRowKey = (item: T, index: number): string => {
+    if (keyField && item[keyField] != null) {
+      return String(item[keyField]);
+    }
+    // Fallback to index if no keyField or field doesn't exist
+    return `row-${index}`;
+  };
+
   const handleSort = (key: string) => {
     setSortConfig((current) => {
       if (current?.key === key) {
@@ -88,33 +99,33 @@ export function DataTable<T extends Record<string, any>>({
   };
 
   return (
-    <div className={cn('space-y-4', className)}>
-      {/* Search and filters */}
+    <div className={cn('space-y-3 md:space-y-4', className)}>
+      {/* Search and filters - Responsive layout */}
       {searchable && (
-        <div className="flex items-center gap-4">
-          <div className="relative flex-1 max-w-sm">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
+          <div className="relative flex-1 max-w-full sm:max-w-sm">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder={searchPlaceholder}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+              className="pl-10 h-10"
             />
           </div>
         </div>
       )}
 
-      {/* Table */}
+      {/* Table - Responsive with horizontal scroll */}
       <div className="rounded-md border">
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full min-w-[600px]">
             <thead>
               <tr className="border-b bg-muted/50">
                 {columns.map((column) => (
                   <th
                     key={String(column.key)}
                     className={cn(
-                      'h-12 px-4 text-left align-middle font-medium text-muted-foreground',
+                      'h-12 px-3 sm:px-4 text-left align-middle font-medium text-muted-foreground text-sm',
                       column.sortable && 'cursor-pointer hover:text-foreground',
                       column.className
                     )}
@@ -122,7 +133,7 @@ export function DataTable<T extends Record<string, any>>({
                       column.sortable && handleSort(String(column.key))
                     }
                   >
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 whitespace-nowrap">
                       {column.title}
                       {column.sortable && sortConfig?.key === column.key && (
                         <span className="text-xs">
@@ -139,7 +150,7 @@ export function DataTable<T extends Record<string, any>>({
                 <tr>
                   <td
                     colSpan={columns.length}
-                    className="h-24 text-center text-muted-foreground"
+                    className="h-24 text-center text-muted-foreground text-sm"
                   >
                     {emptyMessage}
                   </td>
@@ -147,17 +158,19 @@ export function DataTable<T extends Record<string, any>>({
               ) : (
                 paginatedData.map((item, index) => (
                   <tr
-                    key={index}
+                    key={getRowKey(item, index)}
                     className="border-b transition-colors hover:bg-muted/50"
                   >
                     {columns.map((column) => (
                       <td
                         key={String(column.key)}
-                        className={cn('p-4 align-middle', column.className)}
+                        className={cn('p-3 sm:p-4 align-middle text-sm', column.className)}
                       >
-                        {column.render
-                          ? column.render(item[column.key], item)
-                          : String(item[column.key] || '')}
+                        <div className="max-w-[200px] truncate">
+                          {column.render
+                            ? column.render(item[column.key], item)
+                            : String(item[column.key] || '')}
+                        </div>
                       </td>
                     ))}
                   </tr>
@@ -168,23 +181,24 @@ export function DataTable<T extends Record<string, any>>({
         </div>
       </div>
 
-      {/* Pagination */}
+      {/* Pagination - Responsive layout */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-muted-foreground">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0">
+          <div className="text-xs sm:text-sm text-muted-foreground order-2 sm:order-1">
             Showing {startIndex + 1} to{' '}
             {Math.min(startIndex + pageSize, sortedData.length)} of{' '}
             {sortedData.length} entries
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2 order-1 sm:order-2">
             <Button
               variant="outline"
               size="sm"
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={currentPage === 1}
+              className="min-h-[44px]"
             >
               <ChevronLeft className="h-4 w-4" />
-              Previous
+              <span className="hidden sm:inline">Previous</span>
             </Button>
             <div className="flex items-center gap-1">
               {Array.from({ length: totalPages }, (_, i) => i + 1)
@@ -203,7 +217,7 @@ export function DataTable<T extends Record<string, any>>({
                       variant={currentPage === page ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => setCurrentPage(page)}
-                      className="w-8 h-8 p-0"
+                      className="w-8 h-8 p-0 min-h-[44px] min-w-[44px] sm:w-8 sm:h-8 sm:min-h-0 sm:min-w-0"
                     >
                       {page}
                     </Button>
@@ -215,8 +229,9 @@ export function DataTable<T extends Record<string, any>>({
               size="sm"
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
+              className="min-h-[44px]"
             >
-              Next
+              <span className="hidden sm:inline">Next</span>
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>

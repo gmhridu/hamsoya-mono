@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useServerAuth } from '@/components/providers/server-auth-provider';
+import { useUser, useIsAuthenticated, useAuthLoading } from '@/store/auth-store';
 import type { AuthGateProps } from '@/types/auth';
 import { useRouter } from 'next/navigation';
 import { useMemo, useEffect } from 'react';
@@ -27,7 +27,8 @@ export function AuthGate({
   className,
 }: AuthGateProps) {
   const router = useRouter();
-  const { isAuthenticated, isLoading } = useServerAuth();
+  const isAuthenticated = useIsAuthenticated();
+  const isLoading = useAuthLoading();
 
   // Determine redirect paths based on props and auth state
   const redirectPath = useMemo(() => {
@@ -137,7 +138,9 @@ export function RoleGate({
   redirectTo?: string;
 }) {
   const router = useRouter();
-  const { user, isAuthenticated, isLoading } = useServerAuth();
+  const user = useUser();
+  const isAuthenticated = useIsAuthenticated();
+  const isLoading = useAuthLoading();
 
   // Check if user has required role
   const hasRequiredRole = useMemo(() => {

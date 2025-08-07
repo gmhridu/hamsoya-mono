@@ -71,6 +71,7 @@ export interface JWTPayload {
   role: UserRole;
   profile_image_url?: string;
   is_verified?: boolean;
+  created_at?: string;
   iat?: number;
   exp?: number;
 }

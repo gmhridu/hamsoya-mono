@@ -1,22 +1,25 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useViewTransitionRouter } from '@/components/ui/view-transition-link';
+import { redirect, useRouter } from 'next/navigation';
 import { useCallback } from 'react';
+import { useAuthStore } from '@/store/auth-store';
+import { AUTH_QUERY_KEYS } from '@/types/auth';
 
 /**
  * Post-login navigation utility
  * Provides seamless client-side navigation after successful login
- * without using window.location or page reloads
+ * with native View Transitions for smooth experience
  */
 export function usePostLoginNavigation() {
-  const router = useRouter();
+  const router = useViewTransitionRouter();
+  const nextRouter = useRouter(); // For refresh functionality
 
   /**
    * Navigate to home page after successful login
-   * Uses Next.js router for instant client-side navigation
+   * Uses View Transitions for smooth navigation
    */
   const navigateToHome = useCallback(() => {
-    // Use router.push for instant client-side navigation
     router.push('/');
   }, [router]);
 
@@ -49,8 +52,8 @@ export function usePostLoginNavigation() {
    * Useful for updating server-side data after login
    */
   const refreshPage = useCallback(() => {
-    router.refresh();
-  }, [router]);
+    nextRouter.refresh();
+  }, [nextRouter]);
 
   return {
     navigateToHome,
@@ -76,7 +79,7 @@ export function usePostLoginNavigationWithLoading() {
     try {
       // Start navigation
       router.push('/');
-      
+
       // Return a promise that resolves after a short delay
       // This allows the UI to show loading states during navigation
       return new Promise<void>((resolve) => {
@@ -96,7 +99,7 @@ export function usePostLoginNavigationWithLoading() {
   const navigateToPathWithLoading = useCallback(async (path: string) => {
     try {
       router.push(path);
-      
+
       return new Promise<void>((resolve) => {
         setTimeout(() => {
           resolve();
@@ -115,51 +118,78 @@ export function usePostLoginNavigationWithLoading() {
 }
 
 /**
- * Utility function for handling post-login redirects
- * Can be used in login components or auth callbacks
+ * Validate redirect path based on user role
+ * SECURITY: Prevents unauthorized users from being redirected to admin routes
  */
-export function handlePostLoginRedirect(
-  router: ReturnType<typeof useRouter>,
-  redirectPath?: string | null
-) {
-  // If there's a specific redirect path, use it
-  if (redirectPath && redirectPath !== '/login') {
-    router.push(redirectPath);
-    return;
+function validateRedirectPath(path: string, userRole?: string): string | null {
+  if (!path || path === '/login') {
+    return null;
   }
 
-  // Default to home page
-  router.push('/');
+  // Security check: Admin routes only for admin users
+  if (path.startsWith('/admin') && userRole !== 'ADMIN') {
+    return null; // Block admin redirects for non-admin users
+  }
+
+  // Additional security checks
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return null; // Block external redirects
+  }
+
+  if (path.includes('..') || path.includes('//')) {
+    return null; // Block path traversal attempts
+  }
+
+  return path;
+}
+
+/**
+ * Utility function for handling post-login redirects
+ * Can be used in login components or auth callbacks
+ * Now includes role-based redirect logic with security validation
+ * Uses server actions for immediate redirection
+ */
+export async function handlePostLoginRedirect(
+  redirectPath?: string | null,
+  userRole?: string
+) {
+  console.log('handlePostLoginRedirect called with:', { redirectPath, userRole });
+
+  // Use server action for redirect
+  const { redirectAfterLogin } = await import('@/lib/server-navigation');
+  await redirectAfterLogin(redirectPath || undefined);
 }
 
 /**
  * Hook for managing login flow with navigation
  * Combines authentication state with navigation logic
+ * Now includes role-based redirect logic
  */
 export function useLoginFlow() {
   const router = useRouter();
-  const { navigateToHomeAndReplace } = usePostLoginNavigation();
+  const { navigateToHomeAndReplace, navigateAndReplace } = usePostLoginNavigation();
 
   /**
    * Complete login flow
-   * Handles post-login navigation and cleanup
+   * Handles post-login navigation and cleanup with role-based logic and security validation
+   * Uses server actions for immediate redirection
    */
-  const completeLogin = useCallback((redirectPath?: string) => {
-    if (redirectPath && redirectPath !== '/login') {
-      router.replace(redirectPath);
-    } else {
-      navigateToHomeAndReplace();
-    }
-  }, [router, navigateToHomeAndReplace]);
+  const completeLogin = useCallback(async (redirectPath?: string, userRole?: string) => {
+    console.log('completeLogin called with:', { redirectPath, userRole });
+
+    // Use server action for redirect
+    const { redirectAfterLogin } = await import('@/lib/server-navigation');
+    await redirectAfterLogin(redirectPath);
+  }, []);
 
   /**
-   * Handle login success with optional redirect
+   * Handle login success with optional redirect and user role
    */
-  const handleLoginSuccess = useCallback((redirectPath?: string) => {
-    // Small delay to allow any auth state updates to complete
-    setTimeout(() => {
-      completeLogin(redirectPath);
-    }, 50);
+  const handleLoginSuccess = useCallback(async (redirectPath?: string, userRole?: string) => {
+    console.log('handleLoginSuccess called with:', { redirectPath, userRole });
+
+    // Use server action immediately
+    await completeLogin(redirectPath, userRole);
   }, [completeLogin]);
 
   return {
@@ -169,41 +199,180 @@ export function useLoginFlow() {
 }
 
 /**
+ * Admin navigation utilities
+ * Provides optimized navigation to admin routes with data prefetching
+ */
+export const adminNavigationUtils = {
+  /**
+   * Validate admin access before navigation
+   * Returns true if user has admin access, false otherwise
+   */
+  async validateAdminAccess(): Promise<boolean> {
+    try {
+      // Import auth utilities dynamically
+      const { useAuthStore } = await import('@/store/auth-store');
+      const store = useAuthStore.getState();
+
+      return store.isAuthenticated && store.user?.role === 'ADMIN';
+    } catch (error) {
+      console.error('Admin access validation failed:', error);
+      return false;
+    }
+  },
+
+  /**
+   * Sync auth state before admin navigation
+   * Ensures client and server auth state are synchronized
+   */
+  async syncAuthState(): Promise<void> {
+    try {
+      const { queryClient } = await import('@/lib/query-client');
+
+      // Invalidate and refetch current user data to ensure fresh state
+      await queryClient.invalidateQueries({
+        queryKey: AUTH_QUERY_KEYS.me,
+      });
+
+      // Wait for fresh user data
+      await queryClient.refetchQueries({
+        queryKey: AUTH_QUERY_KEYS.me,
+      });
+
+      console.log('Auth state synchronized');
+    } catch (error) {
+      console.error('Auth state sync failed:', error);
+      // Don't throw - navigation should still work
+    }
+  },
+};
+
+/**
+ * Enhanced admin navigation hook
+ * Provides optimistic navigation with prefetching and error handling
+ */
+export function useAdminNavigation() {
+  const router = useViewTransitionRouter();
+  const { isAuthenticated, user } = useAuthStore();
+
+  /**
+   * Navigate to admin dashboard with prefetching and validation
+   * Implements optimistic navigation with fallback
+   */
+  const navigateToAdmin = useCallback(async (options?: {
+    prefetch?: boolean;
+    validate?: boolean;
+    fallbackUrl?: string;
+  }) => {
+    const {
+      prefetch = true,
+      validate = true,
+      fallbackUrl = '/login?error=' + encodeURIComponent('Admin access required')
+    } = options || {};
+
+    try {
+      console.log('🚀 Starting admin navigation...', { isAuthenticated, userRole: user?.role });
+
+      // Quick client-side validation first
+      if (validate && (!isAuthenticated || user?.role !== 'ADMIN')) {
+        console.log('❌ Admin access validation failed, redirecting to fallback');
+        router.push(fallbackUrl);
+        return;
+      }
+
+      // Prefetch admin data if requested
+      if (prefetch) {
+        console.log('📦 Prefetching admin data...');
+        // Import and use admin data prefetcher
+        const { adminDataPrefetcher } = await import('@/lib/admin-data-prefetcher');
+
+        // Don't await - let prefetching happen in background
+        adminDataPrefetcher.prefetchAllAdminData().catch(console.error);
+
+        // Sync auth state to ensure consistency
+        adminDataPrefetcher.syncAuthState().catch(console.error);
+      }
+
+      // Navigate optimistically
+      console.log('🎯 Navigating to admin dashboard...');
+      router.push('/admin');
+
+    } catch (error) {
+      console.error('❌ Admin navigation failed:', error);
+
+      // Fallback navigation
+      router.push(fallbackUrl);
+    }
+  }, [router, isAuthenticated, user]);
+
+  /**
+   * Prefetch admin data without navigation
+   * Useful for hover effects or preparation
+   */
+  const prefetchAdminData = useCallback(async () => {
+    if (!isAuthenticated || user?.role !== 'ADMIN') {
+      return;
+    }
+
+    try {
+      const { adminDataPrefetcher } = await import('@/lib/admin-data-prefetcher');
+      await adminDataPrefetcher.prefetchAllAdminData();
+    } catch (error) {
+      console.error('Admin data prefetching failed:', error);
+    }
+  }, [isAuthenticated, user]);
+
+  return {
+    navigateToAdmin,
+    prefetchAdminData,
+    canAccessAdmin: isAuthenticated && user?.role === 'ADMIN',
+  };
+}
+
+/**
  * Navigation utilities for different scenarios
+ * Updated to use View Transitions for smooth navigation with enhanced admin support
  */
 export const navigationUtils = {
   /**
    * Navigate to home page (standard navigation)
    */
-  goHome: (router: ReturnType<typeof useRouter>) => {
+  goHome: (router: ReturnType<typeof useViewTransitionRouter>) => {
     router.push('/');
   },
 
   /**
    * Navigate to home page and replace history
    */
-  goHomeReplace: (router: ReturnType<typeof useRouter>) => {
+  goHomeReplace: (router: ReturnType<typeof useViewTransitionRouter>) => {
     router.replace('/');
   },
 
   /**
    * Navigate to products page
    */
-  goToProducts: (router: ReturnType<typeof useRouter>) => {
+  goToProducts: (router: ReturnType<typeof useViewTransitionRouter>) => {
     router.push('/products');
   },
 
   /**
    * Navigate to dashboard (for authenticated users)
    */
-  goToDashboard: (router: ReturnType<typeof useRouter>) => {
+  goToDashboard: (router: ReturnType<typeof useViewTransitionRouter>) => {
     router.push('/dashboard');
+  },
+
+  /**
+   * Navigate to admin dashboard (for admin users)
+   * @deprecated Use useAdminNavigation hook instead for better prefetching and error handling
+   */
+  goToAdminDashboard: (router: ReturnType<typeof useViewTransitionRouter>) => {
+    router.push('/admin');
   },
 
   /**
    * Navigate to bookmarks page
    */
-  goToBookmarks: (router: ReturnType<typeof useRouter>) => {
+  goToBookmarks: (router: ReturnType<typeof useViewTransitionRouter>) => {
     router.push('/bookmarks');
   },
 

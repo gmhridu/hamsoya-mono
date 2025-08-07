@@ -1,8 +1,9 @@
 'use client';
 
 import { CartDrawer } from '@/components/cart/cart-drawer';
-import { useServerAuth } from '@/components/providers/server-auth-provider';
+import { useUser, useIsAuthenticated } from '@/store/auth-store';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import type { User } from '@/types/auth';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -27,43 +28,77 @@ import {
   Moon,
   Search,
   Settings,
+  Shield,
   ShoppingBag,
   Sun,
   User as UserIcon,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import Image from 'next/image';
-import Link from 'next/link';
+import { ViewTransitionLink, useViewTransitionRouter } from '@/components/ui/view-transition-link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
+import { useAdminNavigation } from '@/lib/post-login-navigation';
 
 interface NavbarProps {
   initialCartCount?: number;
   initialBookmarkCount?: number;
+  serverUser?: User | null;
+  serverIsAuthenticated?: boolean;
 }
 
-export function Navbar({ initialCartCount = 0, initialBookmarkCount = 0 }: NavbarProps) {
+export function Navbar({
+  initialCartCount = 0,
+  initialBookmarkCount = 0,
+  serverUser = null,
+  serverIsAuthenticated = false
+}: NavbarProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const pathname = usePathname();
 
-  const { user, isAuthenticated } = useServerAuth();
+  // Enhanced admin navigation with prefetching
+  const { navigateToAdmin, prefetchAdminData, canAccessAdmin } = useAdminNavigation();
+
+  const clientUser = useUser();
+  const clientIsAuthenticated = useIsAuthenticated();
   const { getBookmarkCount, isHydrated: bookmarksHydrated } = useBookmarksStore();
   const logoutMutation = useLogout();
   const { setTheme } = useTheme();
+  const router = useViewTransitionRouter();
 
-  // Always use server-side data for instant authentication state
-  const displayUser = user;
-  const displayIsAuthenticated = isAuthenticated;
+  // Use server-side data first to prevent flashing, fallback to client data after hydration
+  // This ensures immediate display of correct user state without visual flashing
+  const displayUser = serverUser || clientUser;
+  const displayIsAuthenticated = serverIsAuthenticated || clientIsAuthenticated;
 
   // Use server-side count until client is hydrated, then use client-side count
   const bookmarkCount = bookmarksHydrated ? getBookmarkCount() : initialBookmarkCount;
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      // Navigate to products page with search query
-      window.location.href = `/products?search=${encodeURIComponent(searchQuery.trim())}`;
+      // Use server action for navigation
+      const { redirectToProducts } = await import('@/lib/server-navigation');
+      await redirectToProducts(searchQuery.trim());
+    }
+  };
+
+  const handleNavigateAdminDashboard = async () => {
+    const { redirectToAdmin } = await import('@/lib/server-navigation');
+    await redirectToAdmin();
+  }
+
+  const handleBookmarksClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+
+    // Check authentication before navigating
+    if (displayIsAuthenticated) {
+      // User is authenticated, navigate to bookmarks
+      router.push('/bookmarks');
+    } else {
+      // User is not authenticated, redirect to login with bookmarks as redirect target
+      router.push('/login?redirect=' + encodeURIComponent('/bookmarks'));
     }
   };
 
@@ -72,15 +107,15 @@ export function Navbar({ initialCartCount = 0, initialBookmarkCount = 0 }: Navba
       <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between gap-4">
           {/* Logo */}
-          <Link href="/" className="flex items-center space-x-2">
+          <ViewTransitionLink href="/" className="flex items-center space-x-2">
             <Image src="/logo.png" width={20} height={20} alt={BRAND_NAME} className="size-8" />
             <span className="font-serif text-xl font-bold text-primary">{BRAND_NAME}</span>
-          </Link>
+          </ViewTransitionLink>
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
             {NAVIGATION_ITEMS.map(item => (
-              <Link
+              <ViewTransitionLink
                 key={item.href}
                 href={item.href}
                 className={cn(
@@ -91,7 +126,7 @@ export function Navbar({ initialCartCount = 0, initialBookmarkCount = 0 }: Navba
                 )}
               >
                 {item.name}
-              </Link>
+              </ViewTransitionLink>
             ))}
           </nav>
 
@@ -115,16 +150,19 @@ export function Navbar({ initialCartCount = 0, initialBookmarkCount = 0 }: Navba
           {/* Actions */}
           <div className="flex items-center space-x-3">
             {/* Bookmarks */}
-            <Button variant="ghost" size="icon" className="relative hover:bg-accent" asChild>
-              <Link href="/bookmarks">
-                <Heart className="h-5 w-5" />
-                <Badge
-                  variant="destructive"
-                  className="absolute -right-1 -top-1 h-4 w-4 rounded-full p-0 text-xs font-semibold text-white flex items-center justify-center min-w-[1rem] min-h-[1rem]"
-                >
-                  {bookmarkCount || 0}
-                </Badge>
-              </Link>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="relative hover:bg-accent cursor-pointer"
+              onClick={handleBookmarksClick}
+            >
+              <Heart className="h-5 w-5" />
+              <Badge
+                variant="destructive"
+                className="absolute -right-1 -top-1 h-4 w-4 rounded-full p-0 text-xs font-semibold text-white flex items-center justify-center min-w-[1rem] min-h-[1rem]"
+              >
+                {bookmarkCount || 0}
+              </Badge>
             </Button>
 
             {/* Cart */}
@@ -171,32 +209,48 @@ export function Navbar({ initialCartCount = 0, initialBookmarkCount = 0 }: Navba
                       </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
+                    {/* Admin Dashboard - Only visible to ADMIN users */}
+                    {displayUser?.role === 'ADMIN' && (
+                      <>
+                        <DropdownMenuItem
+                          onClick={handleNavigateAdminDashboard}
+                          onMouseEnter={() => {
+                            prefetchAdminData();
+                          }}
+                          className="flex items-center cursor-pointer transition-colors duration-200 hover:bg-accent/80 focus:bg-accent/80"
+                        >
+                          <Shield className="mr-2 h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">Admin Dashboard</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                      </>
+                    )}
                     <DropdownMenuItem asChild>
-                      <Link
+                      <ViewTransitionLink
                         href="/profile"
                         className="flex items-center cursor-pointer transition-colors duration-200 hover:bg-accent/80 focus:bg-accent/80"
                       >
                         <UserIcon className="mr-2 h-4 w-4 text-muted-foreground" />
                         <span className="font-medium">Profile</span>
-                      </Link>
+                      </ViewTransitionLink>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link
+                      <ViewTransitionLink
                         href="/orders"
                         className="flex items-center cursor-pointer transition-colors duration-200 hover:bg-accent/80 focus:bg-accent/80"
                       >
                         <ShoppingBag className="mr-2 h-4 w-4 text-muted-foreground" />
                         <span className="font-medium">My Orders</span>
-                      </Link>
+                      </ViewTransitionLink>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link
+                      <ViewTransitionLink
                         href="/settings"
                         className="flex items-center cursor-pointer transition-colors duration-200 hover:bg-accent/80 focus:bg-accent/80"
                       >
                         <Settings className="mr-2 h-4 w-4 text-muted-foreground" />
                         <span className="font-medium">Settings</span>
-                      </Link>
+                      </ViewTransitionLink>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
@@ -232,13 +286,13 @@ export function Navbar({ initialCartCount = 0, initialBookmarkCount = 0 }: Navba
                 ) : (
                   <>
                     <DropdownMenuItem asChild>
-                      <Link
+                      <ViewTransitionLink
                         href="/login"
                         className="flex items-center cursor-pointer transition-colors duration-200 hover:bg-accent/80 focus:bg-accent/80"
                       >
                         <LogIn className="mr-2 h-4 w-4 text-muted-foreground" />
                         <span className="font-medium">Login/Register</span>
-                      </Link>
+                      </ViewTransitionLink>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
@@ -297,7 +351,7 @@ export function Navbar({ initialCartCount = 0, initialBookmarkCount = 0 }: Navba
                   {/* Mobile Navigation */}
                   <nav className="space-y-1">
                     {NAVIGATION_ITEMS.map(item => (
-                      <Link
+                      <ViewTransitionLink
                         key={item.href}
                         href={item.href}
                         className={cn(
@@ -309,7 +363,7 @@ export function Navbar({ initialCartCount = 0, initialBookmarkCount = 0 }: Navba
                         onClick={() => setIsMenuOpen(false)}
                       >
                         {item.name}
-                      </Link>
+                      </ViewTransitionLink>
                     ))}
                   </nav>
 
@@ -335,30 +389,48 @@ export function Navbar({ initialCartCount = 0, initialBookmarkCount = 0 }: Navba
                           </div>
                         </div>
                         <div className="space-y-1">
-                          <Link
+                          {/* Admin Dashboard - Only visible to ADMIN users */}
+                          {displayUser?.role === 'ADMIN' && (
+                            <button
+                              onClick={() => {
+                                console.log('📱 Mobile Admin Dashboard button clicked');
+                                setIsMenuOpen(false);
+                                navigateToAdmin();
+                              }}
+                              onMouseEnter={() => {
+                                console.log('📱 Mobile Admin Dashboard button hovered');
+                                prefetchAdminData();
+                              }}
+                              className="flex items-center w-full px-3 py-2 text-sm font-medium rounded-md cursor-pointer transition-colors duration-200 hover:bg-accent/80 hover:text-accent-foreground text-left"
+                            >
+                              <Shield className="mr-3 h-4 w-4 text-muted-foreground" />
+                              Admin Dashboard
+                            </button>
+                          )}
+                          <ViewTransitionLink
                             href="/profile"
                             className="flex items-center px-3 py-2 text-sm font-medium rounded-md cursor-pointer transition-colors duration-200 hover:bg-accent/80 hover:text-accent-foreground"
                             onClick={() => setIsMenuOpen(false)}
                           >
                             <UserIcon className="mr-3 h-4 w-4 text-muted-foreground" />
                             Profile
-                          </Link>
-                          <Link
+                          </ViewTransitionLink>
+                          <ViewTransitionLink
                             href="/orders"
                             className="flex items-center px-3 py-2 text-sm font-medium rounded-md cursor-pointer transition-colors duration-200 hover:bg-accent/80 hover:text-accent-foreground"
                             onClick={() => setIsMenuOpen(false)}
                           >
                             <ShoppingBag className="mr-3 h-4 w-4 text-muted-foreground" />
                             My Orders
-                          </Link>
-                          <Link
+                          </ViewTransitionLink>
+                          <ViewTransitionLink
                             href="/settings"
                             className="flex items-center px-3 py-2 text-sm font-medium rounded-md cursor-pointer transition-colors duration-200 hover:bg-accent/80 hover:text-accent-foreground"
                             onClick={() => setIsMenuOpen(false)}
                           >
                             <Settings className="mr-3 h-4 w-4 text-muted-foreground" />
                             Settings
-                          </Link>
+                          </ViewTransitionLink>
                         </div>
                         <div className="pt-2 border-t space-y-1">
                           <button
@@ -405,14 +477,14 @@ export function Navbar({ initialCartCount = 0, initialBookmarkCount = 0 }: Navba
                       </>
                     ) : (
                       <>
-                        <Link
+                        <ViewTransitionLink
                           href="/login"
                           className="flex items-center px-3 py-2 text-sm font-medium rounded-md cursor-pointer transition-colors duration-200 hover:bg-accent/80 hover:text-accent-foreground"
                           onClick={() => setIsMenuOpen(false)}
                         >
                           <UserIcon className="mr-3 h-4 w-4 text-muted-foreground" />
                           Login
-                        </Link>
+                        </ViewTransitionLink>
                         <div className="pt-2 border-t space-y-1">
                           <button
                             onClick={() => {

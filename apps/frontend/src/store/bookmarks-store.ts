@@ -84,8 +84,9 @@ export const useBookmarksStore = create<BookmarksStore>()(
           syncWithRetry();
 
           // Trigger immediate sync to cookies for backward compatibility
-          import('@/lib/unified-storage-sync').then(({ onStoreDataChange }) => {
+          import('@/lib/unified-storage-sync').then(({ onStoreDataChange, updateCountCookies }) => {
             onStoreDataChange();
+            updateCountCookies();
           });
         }
       },
@@ -114,8 +115,9 @@ export const useBookmarksStore = create<BookmarksStore>()(
             .catch(err => console.warn('Failed to sync bookmarks with backend:', err));
 
           // Trigger immediate sync to cookies for backward compatibility
-          import('@/lib/unified-storage-sync').then(({ onStoreDataChange }) => {
+          import('@/lib/unified-storage-sync').then(({ onStoreDataChange, updateCountCookies }) => {
             onStoreDataChange();
+            updateCountCookies();
           });
         }
       },
@@ -154,8 +156,9 @@ export const useBookmarksStore = create<BookmarksStore>()(
             .catch(err => console.warn('Failed to sync bookmarks with backend:', err));
 
           // Trigger immediate sync to cookies for backward compatibility
-          import('@/lib/unified-storage-sync').then(({ onStoreDataChange }) => {
+          import('@/lib/unified-storage-sync').then(({ onStoreDataChange, updateCountCookies }) => {
             onStoreDataChange();
+            updateCountCookies();
           });
         }
       },
@@ -182,8 +185,9 @@ export const useBookmarksStore = create<BookmarksStore>()(
             .catch(err => console.warn('Failed to sync bookmarks with backend:', err));
 
           // Trigger immediate sync to cookies for backward compatibility
-          import('@/lib/unified-storage-sync').then(({ onStoreDataChange }) => {
+          import('@/lib/unified-storage-sync').then(({ onStoreDataChange, updateCountCookies }) => {
             onStoreDataChange();
+            updateCountCookies();
           });
         }
       },

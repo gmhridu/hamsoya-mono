@@ -105,11 +105,43 @@ export function getAndClearStoredRedirect(): string | null {
 
 /**
  * Store redirect URL for after login
+ * SECURITY: Validates redirect URL to prevent unauthorized access
  */
-export function storeRedirectUrl(url: string): void {
+export function storeRedirectUrl(url: string, userRole?: string): void {
   if (typeof window === 'undefined') return;
 
+  // Security validation: Don't store admin routes for non-admin users
+  if (url.startsWith('/admin') && userRole !== 'ADMIN') {
+    return; // Don't store admin redirects for non-admin users
+  }
+
   sessionStorage.setItem('auth_redirect', url);
+}
+
+/**
+ * Validate redirect URL based on user role
+ * SECURITY: Prevents unauthorized users from being redirected to admin routes
+ */
+export function validateRedirectUrl(url: string, userRole?: string): string | null {
+  if (!url || url === '/login') {
+    return null;
+  }
+
+  // Security check: Admin routes only for admin users
+  if (url.startsWith('/admin') && userRole !== 'ADMIN') {
+    return null; // Block admin redirects for non-admin users
+  }
+
+  // Additional security checks
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return null; // Block external redirects
+  }
+
+  if (url.includes('..') || url.includes('//')) {
+    return null; // Block path traversal attempts
+  }
+
+  return url;
 }
 
 /**
@@ -123,29 +155,47 @@ export async function handleLoginSuccess(user: User, redirectUrl?: string): Prom
   // Preload critical data in background
   preloadUserData(user).catch(console.error);
 
-  // Get final redirect URL
-  const finalRedirectUrl = redirectUrl || getAndClearStoredRedirect() || getLoginRedirectUrl('/');
+  // Get final redirect URL with role-based logic and security validation
+  let finalRedirectUrl: string;
 
-  // Use Next.js router for seamless client-side navigation
-  // This provides smooth navigation with loading states for slow connections
-  if (typeof window !== 'undefined') {
-    // Import router dynamically to avoid SSR issues
-    const { useRouter } = await import('next/navigation');
+  if (redirectUrl && redirectUrl !== '/login') {
+    // SECURITY: Validate redirect URL based on user role
+    const validatedRedirect = validateRedirectUrl(redirectUrl, user.role);
+    finalRedirectUrl = validatedRedirect || (user.role === 'ADMIN' ? '/admin' : '/');
+  } else {
+    // Check for stored redirect or URL params with security validation
+    const storedRedirect = getAndClearStoredRedirect();
+    const urlRedirect = getLoginRedirectUrl();
 
-    // For immediate navigation, we'll use a custom event that components can listen to
-    window.dispatchEvent(new CustomEvent('auth:navigate', {
-      detail: { path: finalRedirectUrl, replace: true }
-    }));
+    // SECURITY: Validate stored redirect
+    const validatedStoredRedirect = storedRedirect ? validateRedirectUrl(storedRedirect, user.role) : null;
+    // SECURITY: Validate URL redirect
+    const validatedUrlRedirect = urlRedirect ? validateRedirectUrl(urlRedirect, user.role) : null;
+
+    if (validatedStoredRedirect) {
+      finalRedirectUrl = validatedStoredRedirect;
+    } else if (validatedUrlRedirect) {
+      finalRedirectUrl = validatedUrlRedirect;
+    } else {
+      // Default redirect based on user role
+      if (user.role === 'ADMIN') {
+        finalRedirectUrl = '/admin';
+      } else {
+        finalRedirectUrl = '/';
+      }
+    }
   }
+
+  // Note: This function is deprecated in favor of the post-login navigation hooks
+  // The actual navigation is now handled by useLoginFlow in the login components
 }
 
 /**
- * Enhanced login success handler with router instance
- * For use in components that already have router access
+ * Enhanced login success handler with immediate redirection
+ * Uses window.location.href for immediate redirection based on user role
  */
 export function handleLoginSuccessWithRouter(
   user: User,
-  router: any,
   redirectUrl?: string
 ): void {
   // Hydrate user data immediately
@@ -154,11 +204,41 @@ export function handleLoginSuccessWithRouter(
   // Preload critical data in background
   preloadUserData(user).catch(console.error);
 
-  // Get final redirect URL
-  const finalRedirectUrl = redirectUrl || getAndClearStoredRedirect() || getLoginRedirectUrl('/');
+  // Get final redirect URL with role-based logic
+  let finalRedirectUrl: string;
 
-  // Use router.replace for seamless navigation without history entry
-  router.replace(finalRedirectUrl);
+  if (redirectUrl && redirectUrl !== '/login') {
+    // SECURITY: Validate redirect URL based on user role
+    const validatedRedirect = validateRedirectUrl(redirectUrl, user.role);
+    finalRedirectUrl = validatedRedirect || (user.role === 'ADMIN' ? '/admin' : '/');
+  } else {
+    // Check for stored redirect or URL params with security validation
+    const storedRedirect = getAndClearStoredRedirect();
+    const urlRedirect = getLoginRedirectUrl();
+
+    // SECURITY: Validate stored redirect
+    const validatedStoredRedirect = storedRedirect ? validateRedirectUrl(storedRedirect, user.role) : null;
+    // SECURITY: Validate URL redirect
+    const validatedUrlRedirect = urlRedirect ? validateRedirectUrl(urlRedirect, user.role) : null;
+
+    if (validatedStoredRedirect) {
+      finalRedirectUrl = validatedStoredRedirect;
+    } else if (validatedUrlRedirect) {
+      finalRedirectUrl = validatedUrlRedirect;
+    } else {
+      // Default redirect based on user role
+      if (user.role === 'ADMIN') {
+        finalRedirectUrl = '/admin';
+      } else {
+        finalRedirectUrl = '/';
+      }
+    }
+  }
+
+  console.log('handleLoginSuccessWithRouter - Redirecting to:', finalRedirectUrl, 'for user role:', user.role);
+
+  // Use window.location.href for immediate redirection
+  window.location.href = finalRedirectUrl;
 }
 
 /**

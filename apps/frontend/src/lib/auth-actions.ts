@@ -10,6 +10,32 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 
+/**
+ * Validate redirect URL based on user role
+ * SECURITY: Prevents unauthorized users from being redirected to admin routes
+ */
+function validateRedirectForRole(url: string, userRole?: string): string | null {
+  if (!url || url === '/login') {
+    return null;
+  }
+
+  // Security check: Admin routes only for admin users
+  if (url.startsWith('/admin') && userRole !== 'ADMIN') {
+    return null; // Block admin redirects for non-admin users
+  }
+
+  // Additional security checks
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return null; // Block external redirects
+  }
+
+  if (url.includes('..') || url.includes('//')) {
+    return null; // Block path traversal attempts
+  }
+
+  return url;
+}
+
 const LoginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
@@ -101,8 +127,24 @@ export async function loginAction(formData: FormData) {
       }
     }
 
-    // Get redirect URL from form data or default to home
-    const redirectTo = (formData.get('redirectTo') as string) || '/';
+    // Implement role-based redirect logic with security validation
+    const userRole = data.data?.user?.role;
+    const formRedirectTo = formData.get('redirectTo') as string;
+
+    let redirectTo: string;
+
+    if (formRedirectTo && formRedirectTo !== '/login') {
+      // SECURITY: Validate redirect URL based on user role
+      const validatedRedirect = validateRedirectForRole(formRedirectTo, userRole);
+      redirectTo = validatedRedirect || (userRole === 'ADMIN' ? '/admin' : '/');
+    } else {
+      // Default redirect based on user role
+      if (userRole === 'ADMIN') {
+        redirectTo = '/admin';
+      } else {
+        redirectTo = '/';
+      }
+    }
 
     // Server-side redirect - instant navigation without loading states
     redirect(redirectTo);

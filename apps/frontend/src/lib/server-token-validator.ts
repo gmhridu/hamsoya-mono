@@ -184,6 +184,85 @@ export function clearAuthCookies(response: NextResponse): void {
 }
 
 /**
+ * Clear all authentication cookies and session data
+ * Enhanced for comprehensive security cleanup with immediate effect
+ */
+export function clearAllAuthCookies(response: NextResponse): void {
+  const isProduction = process.env.NODE_ENV === 'production';
+  const pastDate = new Date(0); // January 1, 1970
+
+  // Clear access token with multiple approaches for immediate effect
+  response.cookies.set('accessToken', '', {
+    httpOnly: false,
+    maxAge: 0,
+    expires: pastDate,
+    path: '/',
+    secure: isProduction,
+    sameSite: 'strict',
+  });
+
+  // Clear refresh token with immediate expiration - CRITICAL FIX
+  response.cookies.set('refreshToken', '', {
+    httpOnly: true,
+    maxAge: 0,
+    expires: pastDate,
+    path: '/',
+    secure: isProduction,
+    sameSite: 'strict',
+  });
+
+  // Also try alternative cookie names that might exist
+  response.cookies.set('refresh_token', '', {
+    httpOnly: true,
+    maxAge: 0,
+    expires: pastDate,
+    path: '/',
+    secure: isProduction,
+    sameSite: 'strict',
+  });
+
+  response.cookies.set('access_token', '', {
+    httpOnly: false,
+    maxAge: 0,
+    expires: pastDate,
+    path: '/',
+    secure: isProduction,
+    sameSite: 'strict',
+  });
+
+  // Clear any session cookies
+  response.cookies.set('session_id', '', {
+    httpOnly: false,
+    maxAge: 0,
+    expires: pastDate,
+    path: '/',
+  });
+
+  // Clear any other auth-related cookies
+  response.cookies.set('user_role', '', {
+    httpOnly: false,
+    maxAge: 0,
+    expires: pastDate,
+    path: '/',
+  });
+
+  // Clear cart and bookmark count cookies for security
+  response.cookies.set('cart_count', '', {
+    httpOnly: false,
+    maxAge: 0,
+    expires: pastDate,
+    path: '/',
+  });
+
+  response.cookies.set('bookmark_count', '', {
+    httpOnly: false,
+    maxAge: 0,
+    expires: pastDate,
+    path: '/',
+  });
+}
+
+/**
  * Check if guest session might be interfering with authentication
  * Guest sessions use different cookie names and shouldn't interfere,
  * but this function helps identify potential conflicts
@@ -260,9 +339,9 @@ export async function checkAuthenticationWithRefresh(
         response,
       };
     } else {
-      // Refresh failed - clear cookies and redirect
+      // Refresh failed - clear all cookies and redirect
       const response = NextResponse.redirect(new URL('/login', request.url));
-      clearAuthCookies(response);
+      clearAllAuthCookies(response);
 
       return {
         isAuthenticated: false,
@@ -297,9 +376,9 @@ export async function checkAuthenticationWithRefresh(
           response,
         };
       } else {
-        // Refresh failed - clear cookies and redirect
+        // Refresh failed - clear all cookies and redirect
         const response = NextResponse.redirect(new URL('/login', request.url));
-        clearAuthCookies(response);
+        clearAllAuthCookies(response);
 
         return {
           isAuthenticated: false,

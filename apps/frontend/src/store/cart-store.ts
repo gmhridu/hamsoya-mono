@@ -100,8 +100,9 @@ export const useCartStore = create<CartStore>()(
 
           // Trigger immediate sync to cookies for backward compatibility
           import('@/lib/unified-storage-sync')
-            .then(({ onStoreDataChange }) => {
+            .then(({ onStoreDataChange, updateCountCookies }) => {
               onStoreDataChange();
+              updateCountCookies();
             })
             .catch(err => console.warn('Failed to trigger cart sync:', err));
         }
@@ -146,8 +147,9 @@ export const useCartStore = create<CartStore>()(
 
           // Trigger immediate sync to cookies for backward compatibility
           import('@/lib/unified-storage-sync')
-            .then(({ onStoreDataChange }) => {
+            .then(({ onStoreDataChange, updateCountCookies }) => {
               onStoreDataChange();
+              updateCountCookies();
             })
             .catch(err => console.warn('Failed to trigger cart sync:', err));
         }
@@ -187,8 +189,9 @@ export const useCartStore = create<CartStore>()(
 
           // Trigger immediate sync to cookies for backward compatibility
           import('@/lib/unified-storage-sync')
-            .then(({ onStoreDataChange }) => {
+            .then(({ onStoreDataChange, updateCountCookies }) => {
               onStoreDataChange();
+              updateCountCookies();
             })
             .catch(err => console.warn('Failed to trigger cart sync:', err));
         }
@@ -217,8 +220,9 @@ export const useCartStore = create<CartStore>()(
 
           // Trigger immediate sync to cookies for backward compatibility
           import('@/lib/unified-storage-sync')
-            .then(({ onStoreDataChange }) => {
+            .then(({ onStoreDataChange, updateCountCookies }) => {
               onStoreDataChange();
+              updateCountCookies();
             })
             .catch(err => console.warn('Failed to trigger cart sync:', err));
         }

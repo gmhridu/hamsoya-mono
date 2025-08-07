@@ -1,6 +1,6 @@
 'use client';
 import { ProductCard } from '@/components/products/product-card';
-import { useServerAuth } from '@/components/providers/server-auth-provider';
+import { useUser, useIsAuthenticated } from '@/store/auth-store';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -29,8 +29,9 @@ interface ProductsClientProps {
 }
 
 export function ProductsClient(): JSX.Element {
-  // Get user data from centralized server auth context
-  const { user, isAuthenticated } = useServerAuth();
+  // Get user data from auth store
+  const user = useUser();
+  const isAuthenticated = useIsAuthenticated();
   const searchParams = useSearchParams();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 

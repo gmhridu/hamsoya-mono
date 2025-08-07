@@ -13,7 +13,19 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'ik.imagekit.io',
+        port: '',
+        pathname: '/**',
+      },
     ],
+  },
+  // Enable native View Transitions for smooth navigation and optimize development experience
+  experimental: {
+    viewTransition: true,
+    // Reduce static file requests in development
+    optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
   },
   // Turbopack configuration (replaces webpack when using --turbopack)
   turbopack: {
@@ -45,11 +57,6 @@ const nextConfig: NextConfig = {
     fetches: {
       fullUrl: false,
     },
-  },
-  // Optimize development experience
-  experimental: {
-    // Reduce static file requests in development
-    optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
   },
   // Prevent source file exposure in development
   productionBrowserSourceMaps: false,

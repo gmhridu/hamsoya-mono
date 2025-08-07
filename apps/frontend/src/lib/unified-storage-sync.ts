@@ -63,9 +63,38 @@ class UnifiedStorageSync {
       // Update last sync data only if there were changes
       if (hasChanges) {
         this.lastSyncData = { ...currentData };
+        // Also update count cookies when data changes
+        this.updateCountCookies();
       }
     } catch (error) {
       // Silent error handling - no console spam
+    }
+  }
+
+  /**
+   * Update count cookies specifically for cart and bookmarks
+   */
+  updateCountCookies(): void {
+    if (typeof window === 'undefined') return;
+
+    try {
+      // Update cart count cookie
+      const cartData = localStorage.getItem('hamsoya-cart-v2');
+      if (cartData) {
+        const parsed = JSON.parse(cartData);
+        const cartCount = parsed.state?.items?.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0) || 0;
+        this.setCookie('cart_count', cartCount.toString());
+      }
+
+      // Update bookmark count cookie
+      const bookmarksData = localStorage.getItem('hamsoya-bookmarks-v2');
+      if (bookmarksData) {
+        const parsed = JSON.parse(bookmarksData);
+        const bookmarkCount = parsed.state?.bookmarkedProducts?.length || 0;
+        this.setCookie('bookmark_count', bookmarkCount.toString());
+      }
+    } catch (error) {
+      // Silent error handling
     }
   }
 
@@ -159,6 +188,13 @@ class UnifiedStorageSync {
   }
 
   /**
+   * Force update count cookies immediately
+   */
+  forceUpdateCountCookies(): void {
+    this.updateCountCookies();
+  }
+
+  /**
    * Trigger sync when store data changes
    */
   onStoreChange(): void {
@@ -209,6 +245,13 @@ export function forceSyncStorage(): void {
  */
 export function onStoreDataChange(): void {
   unifiedStorageSync.onStoreChange();
+}
+
+/**
+ * Force update count cookies immediately
+ */
+export function updateCountCookies(): void {
+  unifiedStorageSync.forceUpdateCountCookies();
 }
 
 /**

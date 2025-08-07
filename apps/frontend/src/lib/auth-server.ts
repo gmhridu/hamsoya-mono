@@ -31,7 +31,7 @@ async function attemptTokenRefresh(): Promise<{ success: boolean; payload?: any 
     }
 
     // Call the refresh endpoint
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/refresh-token`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/refresh-token`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -280,7 +280,7 @@ export async function getCurrentUserWithRefresh(): Promise<AuthResult> {
     }
 
     // Call your API to refresh tokens
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/refresh-token`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/refresh-token`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -336,12 +336,28 @@ export async function getCurrentUserWithRefresh(): Promise<AuthResult> {
 /**
  * Server-side route protection utility
  * Use in Server Components or Server Actions to protect routes
+ * WARNING: This throws errors - use protectRouteSafe for server components
  */
 export async function protectRoute(): Promise<User> {
   const { user, isAuthenticated } = await getCurrentUser();
 
   if (!isAuthenticated || !user) {
     throw new Error('UNAUTHORIZED');
+  }
+
+  return user;
+}
+
+/**
+ * Safe server-side route protection utility
+ * Returns null instead of throwing errors - better for server components
+ * Middleware should handle redirects, this just provides user data
+ */
+export async function protectRouteSafe(): Promise<User | null> {
+  const { user, isAuthenticated } = await getCurrentUser();
+
+  if (!isAuthenticated || !user) {
+    return null;
   }
 
   return user;
@@ -374,9 +390,24 @@ export async function requireRole(allowedRoles: Array<'USER' | 'SELLER' | 'ADMIN
 
 /**
  * Admin-only access control
+ * WARNING: This throws errors - use requireAdminSafe for server components
  */
 export async function requireAdmin(): Promise<User> {
   return await requireRole(['ADMIN']);
+}
+
+/**
+ * Safe admin-only access control
+ * Returns null instead of throwing errors - better for server components
+ */
+export async function requireAdminSafe(): Promise<User | null> {
+  const user = await protectRouteSafe();
+
+  if (!user || user.role !== 'ADMIN') {
+    return null;
+  }
+
+  return user;
 }
 
 /**
@@ -384,6 +415,20 @@ export async function requireAdmin(): Promise<User> {
  */
 export async function requireSeller(): Promise<User> {
   return await requireRole(['SELLER', 'ADMIN']);
+}
+
+/**
+ * Safe seller or admin access control
+ * Returns null instead of throwing errors - better for server components
+ */
+export async function requireSellerSafe(): Promise<User | null> {
+  const user = await protectRouteSafe();
+
+  if (!user || (user.role !== 'SELLER' && user.role !== 'ADMIN')) {
+    return null;
+  }
+
+  return user;
 }
 
 /**

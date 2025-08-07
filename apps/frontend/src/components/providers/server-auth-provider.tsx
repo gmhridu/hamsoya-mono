@@ -8,6 +8,7 @@
 'use client';
 
 import type { User } from '@/types/auth';
+import { useRouter } from 'next/navigation';
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 
 interface ServerAuthContextType {

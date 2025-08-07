@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
     // Call backend logout if we have tokens
     if (accessToken || refreshToken) {
       try {
-        await fetch(`${backendUrl}/api/auth/logout`, {
+        await fetch(`${backendUrl}/auth/logout`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

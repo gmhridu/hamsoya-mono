@@ -1,10 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -17,6 +19,15 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import {
   Save,
   Eye,
   RotateCcw,
@@ -27,6 +38,73 @@ import {
   Heart,
   Shield,
 } from 'lucide-react';
+
+// Zod schema for form validation
+const homeContentSchema = z.object({
+  hero: z.object({
+    title: z.string().min(1, 'Title is required').max(100, 'Title must be less than 100 characters'),
+    subtitle: z.string().min(1, 'Subtitle is required').max(300, 'Subtitle must be less than 300 characters'),
+    primaryButtonText: z.string().min(1, 'Primary button text is required'),
+    primaryButtonLink: z.string().min(1, 'Primary button link is required'),
+    secondaryButtonText: z.string().min(1, 'Secondary button text is required'),
+    secondaryButtonLink: z.string().min(1, 'Secondary button link is required'),
+    backgroundImage: z.string().url('Must be a valid URL').optional().or(z.literal('')),
+    isActive: z.boolean(),
+  }),
+  preOrder: z.object({
+    title: z.string().min(1, 'Title is required').max(100, 'Title must be less than 100 characters'),
+    description: z.string().min(1, 'Description is required').max(500, 'Description must be less than 500 characters'),
+    buttonText: z.string().min(1, 'Button text is required'),
+    buttonLink: z.string().min(1, 'Button link is required'),
+    backgroundColor: z.string().regex(/^#[0-9A-F]{6}$/i, 'Must be a valid hex color'),
+    textColor: z.string().regex(/^#[0-9A-F]{6}$/i, 'Must be a valid hex color'),
+    isActive: z.boolean(),
+  }),
+  usp: z.object({
+    title: z.string().min(1, 'Title is required'),
+    subtitle: z.string().min(1, 'Subtitle is required'),
+    isActive: z.boolean(),
+    features: z.array(z.object({
+      id: z.number(),
+      icon: z.string(),
+      title: z.string().min(1, 'Feature title is required'),
+      description: z.string().min(1, 'Feature description is required'),
+      isActive: z.boolean(),
+    })),
+  }),
+  howItWorks: z.object({
+    title: z.string().min(1, 'Title is required'),
+    subtitle: z.string().min(1, 'Subtitle is required'),
+    isActive: z.boolean(),
+    steps: z.array(z.object({
+      id: z.number(),
+      title: z.string().min(1, 'Step title is required'),
+      description: z.string().min(1, 'Step description is required'),
+      icon: z.string(),
+    })),
+  }),
+  cod: z.object({
+    title: z.string().min(1, 'Title is required'),
+    subtitle: z.string().min(1, 'Subtitle is required'),
+    features: z.array(z.string()),
+    isActive: z.boolean(),
+  }),
+  reviews: z.object({
+    title: z.string().min(1, 'Title is required'),
+    subtitle: z.string().min(1, 'Subtitle is required'),
+    isActive: z.boolean(),
+    featuredReviews: z.array(z.object({
+      id: z.number(),
+      name: z.string().min(1, 'Name is required'),
+      rating: z.number().min(1).max(5),
+      comment: z.string().min(1, 'Comment is required'),
+      product: z.string().min(1, 'Product is required'),
+      isActive: z.boolean(),
+    })),
+  }),
+});
+
+type HomeContentFormData = z.infer<typeof homeContentSchema>;
 
 // Mock homepage content data
 const mockHomeContent = {
@@ -149,18 +227,32 @@ const mockHomeContent = {
 };
 
 export function HomeContentEditor() {
-  const [content, setContent] = useState(mockHomeContent);
-  const [hasChanges, setHasChanges] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSave = () => {
-    // TODO: Implement save API call
-    console.log('Saving homepage content:', content);
-    setHasChanges(false);
+  const form = useForm<HomeContentFormData>({
+    resolver: zodResolver(homeContentSchema),
+    defaultValues: mockHomeContent,
+    mode: 'onChange',
+  });
+
+  const { watch, handleSubmit, reset, formState: { isDirty, isValid } } = form;
+
+  const onSubmit = async (data: HomeContentFormData) => {
+    setIsSubmitting(true);
+    try {
+      // TODO: Implement save API call
+      console.log('Saving homepage content:', data);
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+      reset(data); // Reset form with new values to clear dirty state
+    } catch (error) {
+      console.error('Error saving content:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleReset = () => {
-    setContent(mockHomeContent);
-    setHasChanges(false);
+    reset(mockHomeContent);
   };
 
   const handlePreview = () => {
@@ -168,387 +260,628 @@ export function HomeContentEditor() {
     window.open('/', '_blank');
   };
 
-  const updateContent = (section: string, field: string, value: any) => {
-    setContent(prev => ({
-      ...prev,
-      [section]: {
-        ...prev[section as keyof typeof prev],
-        [field]: value,
-      },
-    }));
-    setHasChanges(true);
-  };
-
-  const updateFeature = (featureId: number, field: string, value: any) => {
-    setContent(prev => ({
-      ...prev,
-      usp: {
-        ...prev.usp,
-        features: prev.usp.features.map(feature =>
-          feature.id === featureId ? { ...feature, [field]: value } : feature
-        ),
-      },
-    }));
-    setHasChanges(true);
-  };
-
-  const updateReview = (reviewId: number, field: string, value: any) => {
-    setContent(prev => ({
-      ...prev,
-      reviews: {
-        ...prev.reviews,
-        featuredReviews: prev.reviews.featuredReviews.map(review =>
-          review.id === reviewId ? { ...review, [field]: value } : review
-        ),
-      },
-    }));
-    setHasChanges(true);
-  };
-
   return (
-    <div className="space-y-6">
-      {/* Action Bar */}
-      <Card>
-        <CardContent className="py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              {hasChanges && (
-                <Badge variant="outline" className="text-orange-600">
-                  Unsaved Changes
-                </Badge>
-              )}
+    <Form {...form}>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 md:space-y-6">
+        {/* Action Bar - Responsive */}
+        <Card>
+          <CardContent className="p-3 sm:p-4 md:p-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
+              <div className="flex items-center gap-2 order-2 sm:order-1">
+                {isDirty && (
+                  <Badge variant="outline" className="text-orange-600 text-xs sm:text-sm">
+                    Unsaved Changes
+                  </Badge>
+                )}
+              </div>
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto order-1 sm:order-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handlePreview}
+                  className="min-h-[44px] justify-center sm:justify-start"
+                >
+                  <Eye className="mr-2 h-4 w-4" />
+                  <span className="hidden sm:inline">Preview</span>
+                  <span className="sm:hidden">Preview</span>
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleReset}
+                  disabled={!isDirty}
+                  className="min-h-[44px] justify-center sm:justify-start"
+                >
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  <span className="hidden sm:inline">Reset</span>
+                  <span className="sm:hidden">Reset</span>
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={!isDirty || !isValid || isSubmitting}
+                  className="min-h-[44px] justify-center sm:justify-start"
+                >
+                  <Save className="mr-2 h-4 w-4" />
+                  {isSubmitting ? (
+                    <>
+                      <span className="hidden sm:inline">Saving...</span>
+                      <span className="sm:hidden">Saving...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="hidden sm:inline">Save Changes</span>
+                      <span className="sm:hidden">Save</span>
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={handlePreview}>
-                <Eye className="mr-2 h-4 w-4" />
-                Preview
-              </Button>
-              <Button variant="outline" onClick={handleReset} disabled={!hasChanges}>
-                <RotateCcw className="mr-2 h-4 w-4" />
-                Reset
-              </Button>
-              <Button onClick={handleSave} disabled={!hasChanges}>
-                <Save className="mr-2 h-4 w-4" />
-                Save Changes
-              </Button>
-            </div>
+          </CardContent>
+        </Card>
+
+        {/* Content Editor Tabs - Responsive */}
+        <Tabs defaultValue="hero" className="space-y-4 md:space-y-6">
+          {/* Mobile: Scrollable tabs, Desktop: Grid layout */}
+          <div className="w-full">
+            <TabsList className="
+              flex w-full overflow-x-auto scrollbar-hide
+              sm:grid sm:grid-cols-3 sm:overflow-visible
+              lg:grid-cols-6
+              p-1 h-auto min-h-[44px]
+            ">
+              <TabsTrigger
+                value="hero"
+                className="
+                  flex-shrink-0 min-w-[100px] sm:min-w-0
+                  px-3 py-2 text-xs sm:text-sm
+                  whitespace-nowrap min-h-[40px]
+                "
+              >
+                <span className="hidden sm:inline">Hero Section</span>
+                <span className="sm:hidden">Hero</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="preorder"
+                className="
+                  flex-shrink-0 min-w-[100px] sm:min-w-0
+                  px-3 py-2 text-xs sm:text-sm
+                  whitespace-nowrap min-h-[40px]
+                "
+              >
+                <span className="hidden sm:inline">Pre-Order</span>
+                <span className="sm:hidden">Pre-Order</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="usp"
+                className="
+                  flex-shrink-0 min-w-[100px] sm:min-w-0
+                  px-3 py-2 text-xs sm:text-sm
+                  whitespace-nowrap min-h-[40px]
+                "
+              >
+                <span className="hidden sm:inline">USP Features</span>
+                <span className="sm:hidden">Features</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="howitworks"
+                className="
+                  flex-shrink-0 min-w-[100px] sm:min-w-0
+                  px-3 py-2 text-xs sm:text-sm
+                  whitespace-nowrap min-h-[40px]
+                "
+              >
+                <span className="hidden sm:inline">How It Works</span>
+                <span className="sm:hidden">How It Works</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="cod"
+                className="
+                  flex-shrink-0 min-w-[100px] sm:min-w-0
+                  px-3 py-2 text-xs sm:text-sm
+                  whitespace-nowrap min-h-[40px]
+                "
+              >
+                <span className="hidden sm:inline">Cash on Delivery</span>
+                <span className="sm:hidden">COD</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="reviews"
+                className="
+                  flex-shrink-0 min-w-[100px] sm:min-w-0
+                  px-3 py-2 text-xs sm:text-sm
+                  whitespace-nowrap min-h-[40px]
+                "
+              >
+                <span className="hidden sm:inline">Reviews</span>
+                <span className="sm:hidden">Reviews</span>
+              </TabsTrigger>
+            </TabsList>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Content Editor Tabs */}
-      <Tabs defaultValue="hero" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="hero">Hero Section</TabsTrigger>
-          <TabsTrigger value="preorder">Pre-Order</TabsTrigger>
-          <TabsTrigger value="usp">USP Features</TabsTrigger>
-          <TabsTrigger value="howitworks">How It Works</TabsTrigger>
-          <TabsTrigger value="cod">Cash on Delivery</TabsTrigger>
-          <TabsTrigger value="reviews">Reviews</TabsTrigger>
-        </TabsList>
-
-        {/* Hero Section */}
-        <TabsContent value="hero">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                Hero Section
-                <Switch
-                  checked={content.hero.isActive}
-                  onCheckedChange={(checked) => updateContent('hero', 'isActive', checked)}
-                />
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="hero-title">Main Title</Label>
-                <Input
-                  id="hero-title"
-                  value={content.hero.title}
-                  onChange={(e) => updateContent('hero', 'title', e.target.value)}
-                  placeholder="Enter main title"
-                />
-              </div>
-              <div>
-                <Label htmlFor="hero-subtitle">Subtitle</Label>
-                <Textarea
-                  id="hero-subtitle"
-                  value={content.hero.subtitle}
-                  onChange={(e) => updateContent('hero', 'subtitle', e.target.value)}
-                  placeholder="Enter subtitle"
-                  rows={3}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="primary-btn-text">Primary Button Text</Label>
-                  <Input
-                    id="primary-btn-text"
-                    value={content.hero.primaryButtonText}
-                    onChange={(e) => updateContent('hero', 'primaryButtonText', e.target.value)}
+          {/* Hero Section */}
+          <TabsContent value="hero">
+            <Card>
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
+                  <span className="text-lg sm:text-xl">Hero Section</span>
+                  <FormField
+                    control={form.control}
+                    name="hero.isActive"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center space-x-2 space-y-0">
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            className="self-start sm:self-center"
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
                   />
-                </div>
-                <div>
-                  <Label htmlFor="primary-btn-link">Primary Button Link</Label>
-                  <Input
-                    id="primary-btn-link"
-                    value={content.hero.primaryButtonLink}
-                    onChange={(e) => updateContent('hero', 'primaryButtonLink', e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="secondary-btn-text">Secondary Button Text</Label>
-                  <Input
-                    id="secondary-btn-text"
-                    value={content.hero.secondaryButtonText}
-                    onChange={(e) => updateContent('hero', 'secondaryButtonText', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="secondary-btn-link">Secondary Button Link</Label>
-                  <Input
-                    id="secondary-btn-link"
-                    value={content.hero.secondaryButtonLink}
-                    onChange={(e) => updateContent('hero', 'secondaryButtonLink', e.target.value)}
-                  />
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="hero-bg">Background Image URL</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="hero-bg"
-                    value={content.hero.backgroundImage}
-                    onChange={(e) => updateContent('hero', 'backgroundImage', e.target.value)}
-                    placeholder="Enter image URL"
-                  />
-                  <Button variant="outline" size="icon">
-                    <ImageIcon className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Pre-Order Section */}
-        <TabsContent value="preorder">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                Pre-Order Section
-                <Switch
-                  checked={content.preOrder.isActive}
-                  onCheckedChange={(checked) => updateContent('preOrder', 'isActive', checked)}
-                />
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="preorder-title">Title</Label>
-                <Input
-                  id="preorder-title"
-                  value={content.preOrder.title}
-                  onChange={(e) => updateContent('preOrder', 'title', e.target.value)}
-                />
-              </div>
-              <div>
-                <Label htmlFor="preorder-desc">Description</Label>
-                <Textarea
-                  id="preorder-desc"
-                  value={content.preOrder.description}
-                  onChange={(e) => updateContent('preOrder', 'description', e.target.value)}
-                  rows={3}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="preorder-btn-text">Button Text</Label>
-                  <Input
-                    id="preorder-btn-text"
-                    value={content.preOrder.buttonText}
-                    onChange={(e) => updateContent('preOrder', 'buttonText', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="preorder-btn-link">Button Link</Label>
-                  <Input
-                    id="preorder-btn-link"
-                    value={content.preOrder.buttonLink}
-                    onChange={(e) => updateContent('preOrder', 'buttonLink', e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="preorder-bg-color">Background Color</Label>
-                  <Input
-                    id="preorder-bg-color"
-                    type="color"
-                    value={content.preOrder.backgroundColor}
-                    onChange={(e) => updateContent('preOrder', 'backgroundColor', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="preorder-text-color">Text Color</Label>
-                  <Input
-                    id="preorder-text-color"
-                    type="color"
-                    value={content.preOrder.textColor}
-                    onChange={(e) => updateContent('preOrder', 'textColor', e.target.value)}
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* USP Features */}
-        <TabsContent value="usp">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                USP Features
-                <Switch
-                  checked={content.usp.isActive}
-                  onCheckedChange={(checked) => updateContent('usp', 'isActive', checked)}
-                />
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="usp-title">Section Title</Label>
-                  <Input
-                    id="usp-title"
-                    value={content.usp.title}
-                    onChange={(e) => updateContent('usp', 'title', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="usp-subtitle">Section Subtitle</Label>
-                  <Input
-                    id="usp-subtitle"
-                    value={content.usp.subtitle}
-                    onChange={(e) => updateContent('usp', 'subtitle', e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <h4 className="font-medium">Features</h4>
-                {content.usp.features.map((feature) => (
-                  <Card key={feature.id} className="p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <h5 className="font-medium">Feature {feature.id}</h5>
-                      <Switch
-                        checked={feature.isActive}
-                        onCheckedChange={(checked) => updateFeature(feature.id, 'isActive', checked)}
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Title</Label>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
+                <FormField
+                  control={form.control}
+                  name="hero.title"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium">Main Title</FormLabel>
+                      <FormControl>
                         <Input
-                          value={feature.title}
-                          onChange={(e) => updateFeature(feature.id, 'title', e.target.value)}
+                          placeholder="Enter main title"
+                          className="h-10 text-base"
+                          {...field}
                         />
-                      </div>
-                      <div>
-                        <Label>Icon</Label>
-                        <Select
-                          value={feature.icon}
-                          onValueChange={(value) => updateFeature(feature.id, 'icon', value)}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="shield">Shield</SelectItem>
-                            <SelectItem value="heart">Heart</SelectItem>
-                            <SelectItem value="zap">Zap</SelectItem>
-                            <SelectItem value="star">Star</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <div className="mt-3">
-                      <Label>Description</Label>
-                      <Textarea
-                        value={feature.description}
-                        onChange={(e) => updateFeature(feature.id, 'description', e.target.value)}
-                        rows={2}
-                      />
-                    </div>
-                  </Card>
-                ))}
-              </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="hero.subtitle"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium">Subtitle</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Enter subtitle"
+                          rows={3}
+                          className="text-base resize-none"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="hero.primaryButtonText"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium">Primary Button Text</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Enter button text"
+                            className="h-10 text-base"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="hero.primaryButtonLink"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium">Primary Button Link</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Enter button link"
+                            className="h-10 text-base"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="hero.secondaryButtonText"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium">Secondary Button Text</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Enter button text"
+                            className="h-10 text-base"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="hero.secondaryButtonLink"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium">Secondary Button Link</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Enter button link"
+                            className="h-10 text-base"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="hero.backgroundImage"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium">Background Image URL</FormLabel>
+                      <FormControl>
+                        <div className="flex gap-2">
+                          <Input
+                            placeholder="Enter image URL"
+                            className="h-10 text-base"
+                            {...field}
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="min-h-[40px] min-w-[40px] flex-shrink-0"
+                          >
+                            <ImageIcon className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* How It Works */}
-        <TabsContent value="howitworks">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                How It Works Section
-                <Switch
-                  checked={content.howItWorks.isActive}
-                  onCheckedChange={(checked) => updateContent('howItWorks', 'isActive', checked)}
+          {/* Pre-Order Section */}
+          <TabsContent value="preorder">
+            <Card>
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
+                  <span className="text-lg sm:text-xl">Pre-Order Section</span>
+                  <FormField
+                    control={form.control}
+                    name="preOrder.isActive"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center space-x-2 space-y-0">
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            className="self-start sm:self-center"
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
+                <FormField
+                  control={form.control}
+                  name="preOrder.title"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium">Title</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Enter pre-order section title"
+                          className="h-10 text-base"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center text-muted-foreground py-8">
-                How It Works section editor will be implemented here
-              </div>
+
+                <FormField
+                  control={form.control}
+                  name="preOrder.description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium">Description</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Enter pre-order section description"
+                          rows={3}
+                          className="text-base resize-none"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="preOrder.buttonText"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium">Button Text</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Enter button text"
+                            className="h-10 text-base"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="preOrder.buttonLink"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium">Button Link</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Enter button link"
+                            className="h-10 text-base"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="preOrder.backgroundColor"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium">Background Color</FormLabel>
+                        <FormControl>
+                          <div className="flex gap-2">
+                            <Input
+                              type="color"
+                              className="h-10 w-16 p-1 border rounded"
+                              {...field}
+                            />
+                            <Input
+                              placeholder="#c79f12"
+                              className="h-10 text-base flex-1"
+                              {...field}
+                            />
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="preOrder.textColor"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium">Text Color</FormLabel>
+                        <FormControl>
+                          <div className="flex gap-2">
+                            <Input
+                              type="color"
+                              className="h-10 w-16 p-1 border rounded"
+                              {...field}
+                            />
+                            <Input
+                              placeholder="#ffffff"
+                              className="h-10 text-base flex-1"
+                              {...field}
+                            />
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* USP Features */}
+          <TabsContent value="usp">
+            <Card>
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
+                  <span className="text-lg sm:text-xl">USP Features</span>
+                  <FormField
+                    control={form.control}
+                    name="usp.isActive"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center space-x-2 space-y-0">
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            className="self-start sm:self-center"
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="usp.title"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium">Section Title</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Enter section title"
+                            className="h-10 text-base"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="usp.subtitle"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium">Section Subtitle</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Enter section subtitle"
+                            className="h-10 text-base"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="text-center text-muted-foreground py-8">
+                  USP Features editor will be implemented in the next phase
+                </div>
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* Cash on Delivery */}
-        <TabsContent value="cod">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                Cash on Delivery Section
-                <Switch
-                  checked={content.cashOnDelivery.isActive}
-                  onCheckedChange={(checked) => updateContent('cashOnDelivery', 'isActive', checked)}
-                />
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center text-muted-foreground py-8">
-                Cash on Delivery section editor will be implemented here
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+          {/* How It Works */}
+          <TabsContent value="howitworks">
+            <Card>
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
+                  <span className="text-lg sm:text-xl">How It Works Section</span>
+                  <FormField
+                    control={form.control}
+                    name="howItWorks.isActive"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center space-x-2 space-y-0">
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            className="self-start sm:self-center"
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 sm:p-6">
+                <div className="text-center text-muted-foreground py-8">
+                  How It Works section editor will be implemented in the next phase
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-        {/* Reviews */}
-        <TabsContent value="reviews">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                Customer Reviews Section
-                <Switch
-                  checked={content.reviews.isActive}
-                  onCheckedChange={(checked) => updateContent('reviews', 'isActive', checked)}
-                />
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center text-muted-foreground py-8">
-                Customer Reviews section editor will be implemented here
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-    </div>
+          {/* Cash on Delivery */}
+          <TabsContent value="cod">
+            <Card>
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
+                  <span className="text-lg sm:text-xl">Cash on Delivery Section</span>
+                  <FormField
+                    control={form.control}
+                    name="cod.isActive"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center space-x-2 space-y-0">
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            className="self-start sm:self-center"
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 sm:p-6">
+                <div className="text-center text-muted-foreground py-8">
+                  Cash on Delivery section editor will be implemented in the next phase
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Reviews */}
+          <TabsContent value="reviews">
+            <Card>
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
+                  <span className="text-lg sm:text-xl">Customer Reviews Section</span>
+                  <FormField
+                    control={form.control}
+                    name="reviews.isActive"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center space-x-2 space-y-0">
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            className="self-start sm:self-center"
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 sm:p-6">
+                <div className="text-center text-muted-foreground py-8">
+                  Customer Reviews section editor will be implemented in the next phase
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </form>
+    </Form>
   );
 }

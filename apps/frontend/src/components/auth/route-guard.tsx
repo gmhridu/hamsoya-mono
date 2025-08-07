@@ -16,6 +16,7 @@ export function RouteGuard({ children, requireAuth = false, redirectTo = '/' }: 
 
   useEffect(() => {
     if (requireAuth && !isAuthenticated) {
+      // Use regular router for auth redirects to avoid View Transition on auth state changes
       router.push('/login');
     } else if (!requireAuth && isAuthenticated) {
       router.push(redirectTo);

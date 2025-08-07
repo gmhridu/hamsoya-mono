@@ -1,8 +1,8 @@
 import { Badge } from '@/components/ui/badge';
+import { ViewTransitionLink } from '@/components/ui/view-transition-link';
 import { mockCategories } from '@/lib/mock-data';
 import { ArrowRight } from 'lucide-react';
 import Image from 'next/image';
-import Link from 'next/link';
 
 export function CategoryGrid() {
   return (
@@ -18,7 +18,7 @@ export function CategoryGrid() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {mockCategories.map(category => (
-            <Link key={category.id} href={`/products?category=${category.id}`} className="group">
+            <ViewTransitionLink key={category.id} href={`/products?category=${category.id}`} className="group">
               <div className="overflow-hidden rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 group-hover:scale-105">
                 <div className="relative h-48 overflow-hidden rounded-xl">
                   <Image
@@ -60,7 +60,7 @@ export function CategoryGrid() {
                   </div>
                 </div>
               </div>
-            </Link>
+            </ViewTransitionLink>
           ))}
         </div>
 

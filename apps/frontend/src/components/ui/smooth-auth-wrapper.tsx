@@ -6,7 +6,7 @@
 
 'use client';
 
-import { useServerAuth } from '@/components/providers/server-auth-provider';
+import { useUser, useIsAuthenticated, useAuthLoading } from '@/store/auth-store';
 import { cn } from '@/lib/utils';
 import { ReactNode, useEffect } from 'react';
 
@@ -48,7 +48,8 @@ export function SmoothAuthWrapper({
   requireAuth = false,
   guestOnly = false,
 }: SmoothAuthWrapperProps) {
-  const { user, isAuthenticated } = useServerAuth();
+  const user = useUser();
+  const isAuthenticated = useIsAuthenticated();
 
   // Instant decision - no loading states needed with server auth
   const shouldShow = (() => {
@@ -74,7 +75,9 @@ export function SmoothAuthWrapper({
  * Hook for smooth authentication-aware navigation
  */
 export function useSmoothAuth() {
-  const { user, isAuthenticated, isLoading } = useServerAuth();
+  const user = useUser();
+  const isAuthenticated = useIsAuthenticated();
+  const isLoading = useAuthLoading();
 
   return {
     user,

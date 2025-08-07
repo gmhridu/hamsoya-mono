@@ -76,8 +76,14 @@ export function useLogin() {
       queryClient.invalidateQueries({ queryKey: queryKeys.auth.me });
       queryClient.invalidateQueries({ queryKey: queryKeys.auth.profile });
 
-      // Note: Toast is handled by the main useLogin hook for better UX
-      router.push('/');
+      // Role-based redirect using window.location.href
+      if (userData?.role === 'ADMIN') {
+        console.log('Admin user detected, redirecting to /admin');
+        window.location.href = '/admin';
+      } else {
+        console.log('Regular user detected, redirecting to home');
+        window.location.href = '/';
+      }
     },
     onError: (error: any) => {
       setLoading(false);
@@ -130,37 +136,36 @@ export function useLogout() {
   };
 
   return useMutation({
-    mutationFn: () => {
-      // Show loading toast
-      loadingToastRef.current = toastService.auth.signingOut();
-      return apiClient.logout();
+    mutationFn: async () => {
+      // Use enhanced logout service for comprehensive logout
+      const { enhancedLogoutService } = await import('@/lib/enhanced-logout-service');
+
+      return enhancedLogoutService.logout({
+        showToast: true,
+        redirectTo: '/',
+        reason: 'User initiated logout via mutation',
+      });
     },
-    onSuccess: () => {
-      handleLogoutCleanup();
-
-      // Update loading toast to success
-      if (loadingToastRef.current) {
-        toastService.auth.logoutSuccess(loadingToastRef.current);
-        loadingToastRef.current = null;
-      } else {
-        toastService.auth.logoutSuccess();
+    onSuccess: (result) => {
+      // Enhanced logout service handles everything
+      // Just ensure we're in a clean state
+      if (!result.success) {
+        console.warn('Logout completed with warnings');
       }
-
-      router.push('/');
     },
-    onError: () => {
-      // Even if logout fails on server, clear local state
-      handleLogoutCleanup();
+    onError: async (error) => {
+      console.error('Logout mutation failed:', error);
 
-      // Update loading toast to success (logout always succeeds locally)
-      if (loadingToastRef.current) {
-        toastService.auth.logoutSuccess(loadingToastRef.current);
-        loadingToastRef.current = null;
-      } else {
-        toastService.auth.logoutSuccess();
+      // Fallback to enhanced logout service with skip backend call
+      try {
+        const { enhancedLogoutService } = await import('@/lib/enhanced-logout-service');
+        await enhancedLogoutService.quickLogout('Logout mutation error fallback');
+      } catch (fallbackError) {
+        console.error('Fallback logout failed:', fallbackError);
+        // Last resort cleanup
+        handleLogoutCleanup();
+        router.push('/');
       }
-
-      router.push('/');
     },
   });
 }

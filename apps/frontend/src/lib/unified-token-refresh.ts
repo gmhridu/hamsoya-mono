@@ -72,7 +72,11 @@ class UnifiedTokenRefreshService {
   private scheduleNextRefresh(): void {
     if (!this.isStarted) return;
 
-    this.stop(); // Clear any existing timer
+    // Clear any existing timer without stopping the service
+    if (this.refreshTimer) {
+      clearTimeout(this.refreshTimer);
+      this.refreshTimer = null;
+    }
 
     const accessToken = this.getAccessTokenFromCookie();
     if (!accessToken) {

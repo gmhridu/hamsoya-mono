@@ -125,29 +125,25 @@ export function useAuth(): UseAuthReturn {
     [setLoading, clearError, setUser, setError]
   );
 
-  // Optimistic logout function with cache cleanup
+  // Optimistic logout function with enhanced cleanup
   const logout = useCallback(async () => {
     try {
-      // Immediately clear state for instant UI updates
-      clearUser();
-      clearError();
+      // Import enhanced logout service dynamically
+      const { enhancedLogoutService } = await import('@/lib/enhanced-logout-service');
 
-      // Use cache manager for smart cache clearing
-      authCacheManager.handleLogout();
-
-      // Call logout API (don't wait for response)
-      apiClient.logout().catch(error => {
-        console.warn('Logout API failed, but local state cleared:', error);
+      // Use enhanced logout service for comprehensive cleanup
+      await enhancedLogoutService.logout({
+        showToast: true,
+        redirectTo: '/',
+        reason: 'User initiated logout',
       });
-
-      // Silent redirect to home
-      router.replace('/');
     } catch (error) {
       console.error('Logout error:', error);
-      // Even if logout fails, ensure local state is cleared
+      // Fallback to basic cleanup
       clearUser();
       clearError();
       authCacheManager.handleLogout();
+      router.replace('/');
     }
   }, [clearUser, clearError, router]);
 

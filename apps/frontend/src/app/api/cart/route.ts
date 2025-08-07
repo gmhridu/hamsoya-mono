@@ -7,15 +7,16 @@ import { createTRPCProxyClient, httpLink } from '@trpc/client';
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 import superjson from 'superjson';
+import { API_CONFIG } from '@/lib/api-config';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const BACKEND_URL = API_CONFIG.backend.base;
 
 // Create a server-side tRPC client
 const trpcClient = createTRPCProxyClient<any>({
   transformer: superjson,
   links: [
     httpLink({
-      url: `${BACKEND_URL}/trpc`,
+      url: API_CONFIG.backend.trpc,
       headers: {
         'Content-Type': 'application/json',
       },

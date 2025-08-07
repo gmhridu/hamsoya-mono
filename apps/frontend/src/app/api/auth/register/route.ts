@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { API_CONFIG } from '@/lib/api-config';
 
 // User registration
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+    // Use centralized API configuration
+    const fullUrl = API_CONFIG.backend.auth.register;
 
-    const response = await fetch(`${backendUrl}/auth/register`, {
+    const response = await fetch(fullUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

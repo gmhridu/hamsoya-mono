@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { ViewTransitionLink } from '@/components/ui/view-transition-link';
 import { ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ProductCard } from '@/components/products/product-card';
@@ -18,15 +18,15 @@ export function FeaturedProducts() {
               Featured Products
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl">
-              Handpicked premium products that represent the best of our collection. 
+              Handpicked premium products that represent the best of our collection.
               Each item is carefully selected for its exceptional quality and authentic taste.
             </p>
           </div>
           <Button asChild variant="outline" className="mt-4 md:mt-0">
-            <Link href="/products">
+            <ViewTransitionLink href="/products">
               View All Products
               <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
+            </ViewTransitionLink>
           </Button>
         </div>
 
@@ -43,13 +43,13 @@ export function FeaturedProducts() {
               Pre-Order Your Favorites
             </h3>
             <p className="text-primary-foreground/90 mb-6 max-w-md mx-auto">
-              Secure your order today and enjoy fresh, premium quality products 
+              Secure your order today and enjoy fresh, premium quality products
               delivered right to your doorstep with cash on delivery.
             </p>
             <Button asChild size="lg" variant="secondary">
-              <Link href="/products">
+              <ViewTransitionLink href="/products">
                 Start Shopping
-              </Link>
+              </ViewTransitionLink>
             </Button>
           </div>
         </div>

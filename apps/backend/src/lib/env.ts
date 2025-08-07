@@ -4,28 +4,28 @@ import { z } from 'zod';
 const envSchema = z.object({
   // Node environment
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  
+
   // Database
   DATABASE_URL: z.string().url('Invalid database URL'),
-  
+
   // Redis
   REDIS_URL: z.string().url('Invalid Redis URL'),
-  
+
   // JWT Secrets
   JWT_ACCESS_SECRET: z.string().min(32, 'JWT access secret must be at least 32 characters'),
   JWT_REFRESH_SECRET: z.string().min(32, 'JWT refresh secret must be at least 32 characters'),
-  
+
   // SMTP Configuration
   SMTP_HOST: z.string().default('smtp.gmail.com'),
   SMTP_PORT: z.string().transform(val => parseInt(val, 10)).pipe(z.number().int().positive()).default('465'),
   SMTP_SERVICE: z.string().default('gmail'),
   SMTP_USER: z.string().email('Invalid SMTP user email'),
   SMTP_PASSWORD: z.string().min(1, 'SMTP password is required'),
-  
+
   // Application URLs
   FRONTEND_URL: z.string().url('Invalid frontend URL').default('http://localhost:3000'),
   BACKEND_URL: z.string().url('Invalid backend URL').default('http://localhost:8787'),
-  
+
   // Optional ImageKit configuration (for reference)
   IMAGEKIT_PUBLIC_KEY: z.string().optional(),
   IMAGEKIT_PRIVATE_KEY: z.string().optional(),
@@ -40,10 +40,10 @@ export const validateEnv = (env: Record<string, any>): Env => {
     return envSchema.parse(env);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const errorMessages = error.errors.map(err => 
+      const errorMessages = error.errors.map(err =>
         `${err.path.join('.')}: ${err.message}`
       ).join('\n');
-      
+
       throw new Error(`Environment validation failed:\n${errorMessages}`);
     }
     throw error;
@@ -69,23 +69,23 @@ export const checkRequiredEnvVars = (env?: Record<string, any>): boolean => {
 // Get environment-specific configuration
 export const getConfig = (env?: Record<string, any>) => {
   const validatedEnv = getEnv(env);
-  
+
   return {
     // Environment
     isDevelopment: validatedEnv.NODE_ENV === 'development',
     isProduction: validatedEnv.NODE_ENV === 'production',
     isTest: validatedEnv.NODE_ENV === 'test',
-    
+
     // Database
     database: {
       url: validatedEnv.DATABASE_URL,
     },
-    
+
     // Redis
     redis: {
       url: validatedEnv.REDIS_URL,
     },
-    
+
     // JWT
     jwt: {
       accessSecret: validatedEnv.JWT_ACCESS_SECRET,
@@ -93,7 +93,7 @@ export const getConfig = (env?: Record<string, any>) => {
       accessTokenExpiry: '15m',
       refreshTokenExpiry: '7d',
     },
-    
+
     // SMTP
     smtp: {
       host: validatedEnv.SMTP_HOST,
@@ -102,13 +102,13 @@ export const getConfig = (env?: Record<string, any>) => {
       user: validatedEnv.SMTP_USER,
       password: validatedEnv.SMTP_PASSWORD,
     },
-    
+
     // URLs
     urls: {
       frontend: validatedEnv.FRONTEND_URL,
       backend: validatedEnv.BACKEND_URL,
     },
-    
+
     // Security
     security: {
       bcryptRounds: 12,
@@ -117,7 +117,7 @@ export const getConfig = (env?: Record<string, any>) => {
       cookieSecure: validatedEnv.NODE_ENV === 'production',
       cookieSameSite: 'strict' as const,
     },
-    
+
     // Rate limiting
     rateLimit: {
       otpCooldownSeconds: 60,
@@ -126,7 +126,7 @@ export const getConfig = (env?: Record<string, any>) => {
       hourLockMinutes: 60,
       maxWrongAttempts: 3,
     },
-    
+
     // ImageKit (optional)
     imageKit: validatedEnv.IMAGEKIT_PUBLIC_KEY ? {
       publicKey: validatedEnv.IMAGEKIT_PUBLIC_KEY,

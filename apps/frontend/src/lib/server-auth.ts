@@ -13,11 +13,14 @@ import {
   isAuthenticated,
   isSeller,
   protectRoute,
+  protectRouteSafe,
   requireAdmin,
+  requireAdminSafe,
   requireAuth,
   requireGuest,
   requireRole,
   requireSeller,
+  requireSellerSafe,
   type AuthResult,
 } from './auth-server';
 
@@ -31,11 +34,14 @@ export {
   isAuthenticated,
   isSeller,
   protectRoute,
+  protectRouteSafe,
   requireAdmin,
+  requireAdminSafe,
   requireAuth,
   requireGuest,
   requireRole,
   requireSeller,
+  requireSellerSafe,
   type AuthResult,
 
 } from './auth-server';

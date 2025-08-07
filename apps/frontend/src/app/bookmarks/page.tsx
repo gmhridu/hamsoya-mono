@@ -1,5 +1,6 @@
 import { BookmarksClient } from '@/components/bookmarks/bookmarks-client';
 import { redirectIfNotAuthenticated } from '@/lib/auth-redirects';
+import { getServerBookmarkCount } from '@/lib/enhanced-server-storage-cache';
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -23,5 +24,8 @@ export default async function BookmarksPage() {
   // Server-side authentication check - redirects if not authenticated
   await redirectIfNotAuthenticated('/bookmarks');
 
-  return <BookmarksClient />;
+  // Get server-side bookmark count to prevent flashing
+  const initialBookmarkCount = await getServerBookmarkCount();
+
+  return <BookmarksClient initialBookmarkCount={initialBookmarkCount} />;
 }

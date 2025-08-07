@@ -1,5 +1,7 @@
 // Enhanced API client for OTP operations with comprehensive error handling
 
+import { API_CONFIG, urlBuilder } from './api-config';
+
 interface APIResponse<T = any> {
   success: boolean;
   data?: T;
@@ -54,7 +56,7 @@ export class EnhancedOTPAPI {
   private baseURL: string;
 
   constructor(baseURL?: string) {
-    this.baseURL = baseURL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+    this.baseURL = baseURL || API_CONFIG.backend.base;
   }
 
   private async makeRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -103,7 +105,7 @@ export class EnhancedOTPAPI {
 
   // Send OTP with enhanced rate limiting
   async sendOTP(email: string): Promise<OTPSendResponse> {
-    const response = await this.makeRequest<APIResponse<OTPSendResponse>>('/api/auth/send-otp', {
+    const response = await this.makeRequest<APIResponse<OTPSendResponse>>(urlBuilder.backend('auth/send-otp'), {
       method: 'POST',
       body: JSON.stringify({ email }),
     });
@@ -114,7 +116,7 @@ export class EnhancedOTPAPI {
   // Verify OTP with enhanced error handling
   async verifyOTP(email: string, otp: string): Promise<OTPVerifyResponse> {
     const response = await this.makeRequest<APIResponse<OTPVerifyResponse>>(
-      '/api/auth/verify-otp-enhanced',
+      urlBuilder.backend('auth/verify-otp-enhanced'),
       {
         method: 'POST',
         body: JSON.stringify({ email, otp }),

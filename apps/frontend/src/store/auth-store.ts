@@ -1,3 +1,4 @@
+import { secureStorage } from '@/lib/secure-storage';
 import { toastService } from '@/lib/toast-service';
 import type { AuthStore, User } from '@/types/auth';
 import { AUTH_STORAGE_KEYS } from '@/types/auth';
@@ -90,6 +91,17 @@ export const useAuthStore = create<AuthStore>()(
         migrate: (persistedState: any) => {
           // Handle migration if needed
           return persistedState;
+        },
+        storage: {
+          getItem: (name: string) => {
+            return secureStorage.getItem(name);
+          },
+          setItem: (name: string, value: any) => {
+            secureStorage.setItem(name, value, { encrypt: true });
+          },
+          removeItem: (name: string) => {
+            secureStorage.removeItem(name);
+          },
         },
       }
     )

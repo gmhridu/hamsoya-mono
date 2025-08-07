@@ -54,9 +54,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
     const body = await request.json();
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
-    const response = await fetch(`${backendUrl}/api/products/${id}`, {
+    const response = await fetch(`${backendUrl}/products/${id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',

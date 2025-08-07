@@ -43,7 +43,7 @@ app.post('/', async c => {
     const isProduction = c.env?.NODE_ENV === 'production' || process.env.NODE_ENV === 'production';
 
     setCookie(c, 'accessToken', result.accessToken, {
-      httpOnly: false, // Allow JavaScript access for API calls
+      httpOnly: true, // Enhanced security - no JavaScript access
       secure: isProduction,
       sameSite: 'Strict',
       maxAge: 5 * 60, // 5 minutes = 300 seconds

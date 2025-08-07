@@ -1,9 +1,11 @@
 import { cookies } from 'next/headers';
+import { getCurrentUser } from '@/lib/server-auth';
 import { Navbar } from './navbar-client';
 
 /**
  * Server component that reads cart and bookmark counts from cookies
- * and passes them to the client-side navbar component for SSR
+ * and gets server-side user data to pass to the client-side navbar component for SSR
+ * This prevents navbar flashing by providing immediate user state
  */
 export async function NavbarServer() {
   // Read counts from cookies on the server-side
@@ -21,5 +23,15 @@ export async function NavbarServer() {
   const safeCartCount = isNaN(cartCount) ? 0 : cartCount;
   const safeBookmarkCount = isNaN(bookmarkCount) ? 0 : bookmarkCount;
 
-  return <Navbar initialCartCount={safeCartCount} initialBookmarkCount={safeBookmarkCount} />;
+  // Get server-side user data to prevent navbar flashing
+  const { user, isAuthenticated } = await getCurrentUser();
+
+  return (
+    <Navbar
+      initialCartCount={safeCartCount}
+      initialBookmarkCount={safeBookmarkCount}
+      serverUser={user}
+      serverIsAuthenticated={isAuthenticated}
+    />
+  );
 }

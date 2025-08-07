@@ -1,14 +1,13 @@
 /**
  * Smooth Transition Component
- * Eliminates white screen flashes during navigation and loading states
- * ZERO FLICKER: Removed useEffect hooks to prevent re-renders
+ * Works with native View Transitions for seamless navigation
+ * Provides fallback for data loading states within pages
  */
 
 'use client';
 
 import { cn } from '@/lib/utils';
-import { useRouter } from 'next/navigation';
-import { ReactNode, useState } from 'react';
+import { ReactNode } from 'react';
 
 interface SmoothTransitionProps {
   children: ReactNode;
@@ -18,8 +17,8 @@ interface SmoothTransitionProps {
 }
 
 /**
- * Smooth transition wrapper that prevents white screen flashes
- * ZERO FLICKER: Removed useEffect and state to prevent re-renders
+ * Smooth transition wrapper for content within pages
+ * Navigation transitions are handled by native View Transitions
  */
 export function SmoothTransition({
   children,
@@ -27,15 +26,13 @@ export function SmoothTransition({
   fallback,
   showFallback = false,
 }: SmoothTransitionProps) {
-  // No state or useEffect - render immediately to prevent flicker
-  // The CSS transition will handle any visual smoothness needed
-
+  // For data loading within pages, show fallback if needed
   if (showFallback && fallback) {
     return <div className={cn('transition-opacity duration-300', className)}>{fallback}</div>;
   }
 
-  // Always render with full opacity - no loading states or transitions
-  // This eliminates white screen flicker completely
+  // For normal content, render immediately
+  // Navigation smoothness is handled by View Transitions
   return <div className={cn('opacity-100', className)}>{children}</div>;
 }
 
@@ -100,24 +97,26 @@ export function AuthTransition({
 }
 
 /**
- * Hook for smooth navigation with loading states
+ * Hook for smooth navigation with View Transitions
+ * @deprecated Use useViewTransitionRouter from view-transition-link.tsx instead
  */
 export function useSmoothNavigation() {
-  const [isNavigating, setIsNavigating] = useState(false);
-  const router = useRouter();
-
   const navigate = async (href: string) => {
-    setIsNavigating(true);
-    try {
+    if (typeof document !== 'undefined' && 'startViewTransition' in document) {
+      const { useRouter } = await import('next/navigation');
+      const router = useRouter();
+      (document as any).startViewTransition(() => {
+        router.push(href);
+      });
+    } else {
+      const { useRouter } = await import('next/navigation');
+      const router = useRouter();
       router.push(href);
-    } finally {
-      // Reset loading state after a short delay to ensure smooth transition
-      setTimeout(() => setIsNavigating(false), 300);
     }
   };
 
   return {
     navigate,
-    isNavigating,
+    isNavigating: false, // No loading states with View Transitions
   };
 }
