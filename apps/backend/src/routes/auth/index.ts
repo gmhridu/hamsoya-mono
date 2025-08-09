@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import checkPasswordResetVerification from './check-password-reset-verification';
 import cooldownStatus from './cooldown-status';
 import forgotPassword from './forgot-password';
+import google from './google';
 import login from './login';
 import logout from './logout';
 import me from './me';
@@ -30,6 +31,9 @@ app.route('/verify-forgot-password-enhanced', verifyForgotPasswordEnhanced);
 app.route('/check-password-reset-verification', checkPasswordResetVerification);
 app.route('/reset-password', resetPassword);
 app.route('/refresh-token', refreshToken);
+
+// OAuth routes
+app.route('/google', google);
 app.route('/refresh', refreshToken); // Alternative endpoint for frontend compatibility
 app.route('/me', me);
 

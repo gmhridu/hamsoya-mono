@@ -28,6 +28,9 @@ export const API_CONFIG = {
       resetPassword: `${FRONTEND_API_URL}/auth/reset-password`,
       verifyForgotPassword: `${FRONTEND_API_URL}/auth/verify-forgot-password-enhanced`,
       checkPasswordResetVerification: `${FRONTEND_API_URL}/auth/check-password-reset-verification`,
+      // Google OAuth endpoints
+      googleOAuth: `${FRONTEND_API_URL}/auth/google`,
+      googleOAuthCallback: `${FRONTEND_API_URL}/auth/google/callback`,
     },
     cart: `${FRONTEND_API_URL}/cart`,
     cartCount: `${FRONTEND_API_URL}/cart/count`,

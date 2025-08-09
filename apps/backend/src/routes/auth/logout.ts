@@ -18,7 +18,7 @@ app.post('/', authMiddleware, async c => {
   try {
     const user = c.get('user') as any;
     const refreshToken = getCookie(c, 'refreshToken');
-    
+
     if (!user || !user.id) {
       return c.json(errorResponse('User not found'), 401);
     }
@@ -26,12 +26,17 @@ app.post('/', authMiddleware, async c => {
     const authService = new AuthService(c.env);
     await authService.logout(user.id, refreshToken);
 
-    // Clear cookies
+    // Clear all authentication cookies (JWT and OAuth)
     deleteCookie(c, 'accessToken', {
       path: '/',
     });
-    
+
     deleteCookie(c, 'refreshToken', {
+      path: '/',
+    });
+
+    // Clear OAuth userInfo cookie
+    deleteCookie(c, 'userInfo', {
       path: '/',
     });
 
@@ -43,8 +48,13 @@ app.post('/', authMiddleware, async c => {
     deleteCookie(c, 'accessToken', {
       path: '/',
     });
-    
+
     deleteCookie(c, 'refreshToken', {
+      path: '/',
+    });
+
+    // Clear OAuth userInfo cookie
+    deleteCookie(c, 'userInfo', {
       path: '/',
     });
 

@@ -15,6 +15,13 @@
       "when": 1754491290492,
       "tag": "0001_modern_sir_ram",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1754757480862,
+      "tag": "0002_past_roughhouse",
+      "breakpoints": true
     }
   ]
 }

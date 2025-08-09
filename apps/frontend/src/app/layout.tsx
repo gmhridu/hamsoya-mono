@@ -119,7 +119,9 @@ export default async function RootLayout({
 
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${playfairDisplay.variable} ${ptSans.variable} antialiased`}>
+      <body className={`${playfairDisplay.variable} ${ptSans.variable} antialiased`}
+      cz-shortcut-listen="true"
+      >
         <ChunkErrorBoundary>
           <TRPCProvider>
             <ThemeProvider

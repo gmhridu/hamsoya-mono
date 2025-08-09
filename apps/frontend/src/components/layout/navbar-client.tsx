@@ -217,7 +217,7 @@ export function Navbar({
                           onMouseEnter={() => {
                             prefetchAdminData();
                           }}
-                          className="flex items-center cursor-pointer transition-colors duration-200 hover:bg-accent/80 focus:bg-accent/80"
+                          className="flex items-center cursor-pointer"
                         >
                           <Shield className="mr-2 h-4 w-4 text-muted-foreground" />
                           <span className="font-medium">Admin Dashboard</span>
@@ -228,7 +228,7 @@ export function Navbar({
                     <DropdownMenuItem asChild>
                       <ViewTransitionLink
                         href="/profile"
-                        className="flex items-center cursor-pointer transition-colors duration-200 hover:bg-accent/80 focus:bg-accent/80"
+                        className="flex items-center cursor-pointer"
                       >
                         <UserIcon className="mr-2 h-4 w-4 text-muted-foreground" />
                         <span className="font-medium">Profile</span>
@@ -237,7 +237,7 @@ export function Navbar({
                     <DropdownMenuItem asChild>
                       <ViewTransitionLink
                         href="/orders"
-                        className="flex items-center cursor-pointer transition-colors duration-200 hover:bg-accent/80 focus:bg-accent/80"
+                        className="flex items-center cursor-pointer"
                       >
                         <ShoppingBag className="mr-2 h-4 w-4 text-muted-foreground" />
                         <span className="font-medium">My Orders</span>
@@ -246,7 +246,7 @@ export function Navbar({
                     <DropdownMenuItem asChild>
                       <ViewTransitionLink
                         href="/settings"
-                        className="flex items-center cursor-pointer transition-colors duration-200 hover:bg-accent/80 focus:bg-accent/80"
+                        className="flex items-center cursor-pointer"
                       >
                         <Settings className="mr-2 h-4 w-4 text-muted-foreground" />
                         <span className="font-medium">Settings</span>
@@ -255,21 +255,21 @@ export function Navbar({
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       onClick={() => setTheme('light')}
-                      className="flex items-center cursor-pointer transition-colors duration-200 hover:bg-accent/80 focus:bg-accent/80"
+                      className="flex items-center cursor-pointer"
                     >
                       <Sun className="mr-2 h-4 w-4 text-muted-foreground" />
                       <span className="font-medium">Light Theme</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => setTheme('dark')}
-                      className="flex items-center cursor-pointer transition-colors duration-200 hover:bg-accent/80 focus:bg-accent/80"
+                      className="flex items-center cursor-pointer"
                     >
                       <Moon className="mr-2 h-4 w-4 text-muted-foreground" />
                       <span className="font-medium">Dark Theme</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => setTheme('system')}
-                      className="flex items-center cursor-pointer transition-colors duration-200 hover:bg-accent/80 focus:bg-accent/80"
+                      className="flex items-center cursor-pointer"
                     >
                       <Settings className="mr-2 h-4 w-4 text-muted-foreground" />
                       <span className="font-medium">System Theme</span>
@@ -288,7 +288,7 @@ export function Navbar({
                     <DropdownMenuItem asChild>
                       <ViewTransitionLink
                         href="/login"
-                        className="flex items-center cursor-pointer transition-colors duration-200 hover:bg-accent/80 focus:bg-accent/80"
+                        className="flex items-center cursor-pointer"
                       >
                         <LogIn className="mr-2 h-4 w-4 text-muted-foreground" />
                         <span className="font-medium">Login/Register</span>
@@ -297,21 +297,21 @@ export function Navbar({
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       onClick={() => setTheme('light')}
-                      className="flex items-center cursor-pointer transition-colors duration-200 hover:bg-accent/80 focus:bg-accent/80"
+                      className="flex items-center cursor-pointer"
                     >
                       <Sun className="mr-2 h-4 w-4 text-muted-foreground" />
                       <span className="font-medium">Light Theme</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => setTheme('dark')}
-                      className="flex items-center cursor-pointer transition-colors duration-200 hover:bg-accent/80 focus:bg-accent/80"
+                      className="flex items-center cursor-pointer"
                     >
                       <Moon className="mr-2 h-4 w-4 text-muted-foreground" />
                       <span className="font-medium">Dark Theme</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => setTheme('system')}
-                      className="flex items-center cursor-pointer transition-colors duration-200 hover:bg-accent/80 focus:bg-accent/80"
+                      className="flex items-center cursor-pointer"
                     >
                       <Settings className="mr-2 h-4 w-4 text-muted-foreground" />
                       <span className="font-medium">System Theme</span>
@@ -401,7 +401,7 @@ export function Navbar({
                                 console.log('📱 Mobile Admin Dashboard button hovered');
                                 prefetchAdminData();
                               }}
-                              className="flex items-center w-full px-3 py-2 text-sm font-medium rounded-md cursor-pointer transition-colors duration-200 hover:bg-accent/80 hover:text-accent-foreground text-left"
+                              className="flex items-center w-full px-3 py-2 text-sm font-medium rounded-md cursor-pointer transition-colors duration-200 hover:bg-secondary/80 hover:text-foreground text-left"
                             >
                               <Shield className="mr-3 h-4 w-4 text-muted-foreground" />
                               Admin Dashboard
@@ -409,7 +409,7 @@ export function Navbar({
                           )}
                           <ViewTransitionLink
                             href="/profile"
-                            className="flex items-center px-3 py-2 text-sm font-medium rounded-md cursor-pointer transition-colors duration-200 hover:bg-accent/80 hover:text-accent-foreground"
+                            className="flex items-center px-3 py-2 text-sm font-medium rounded-md cursor-pointer transition-colors duration-200 hover:bg-secondary/80 hover:text-foreground"
                             onClick={() => setIsMenuOpen(false)}
                           >
                             <UserIcon className="mr-3 h-4 w-4 text-muted-foreground" />
@@ -417,7 +417,7 @@ export function Navbar({
                           </ViewTransitionLink>
                           <ViewTransitionLink
                             href="/orders"
-                            className="flex items-center px-3 py-2 text-sm font-medium rounded-md cursor-pointer transition-colors duration-200 hover:bg-accent/80 hover:text-accent-foreground"
+                            className="flex items-center px-3 py-2 text-sm font-medium rounded-md cursor-pointer transition-colors duration-200 hover:bg-secondary/80 hover:text-foreground"
                             onClick={() => setIsMenuOpen(false)}
                           >
                             <ShoppingBag className="mr-3 h-4 w-4 text-muted-foreground" />
@@ -425,7 +425,7 @@ export function Navbar({
                           </ViewTransitionLink>
                           <ViewTransitionLink
                             href="/settings"
-                            className="flex items-center px-3 py-2 text-sm font-medium rounded-md cursor-pointer transition-colors duration-200 hover:bg-accent/80 hover:text-accent-foreground"
+                            className="flex items-center px-3 py-2 text-sm font-medium rounded-md cursor-pointer transition-colors duration-200 hover:bg-secondary/80 hover:text-foreground"
                             onClick={() => setIsMenuOpen(false)}
                           >
                             <Settings className="mr-3 h-4 w-4 text-muted-foreground" />
@@ -438,7 +438,7 @@ export function Navbar({
                               setTheme('light');
                               setIsMenuOpen(false);
                             }}
-                            className="flex items-center w-full px-3 py-2 text-sm font-medium rounded-md cursor-pointer transition-colors duration-200 hover:bg-accent/80 hover:text-accent-foreground"
+                            className="flex items-center w-full px-3 py-2 text-sm font-medium rounded-md cursor-pointer transition-colors duration-200 hover:bg-secondary/80 hover:text-foreground"
                           >
                             <Sun className="mr-3 h-4 w-4 text-muted-foreground" />
                             Light Theme
@@ -448,7 +448,7 @@ export function Navbar({
                               setTheme('dark');
                               setIsMenuOpen(false);
                             }}
-                            className="flex items-center w-full px-3 py-2 text-sm font-medium rounded-md cursor-pointer transition-colors duration-200 hover:bg-accent/80 hover:text-accent-foreground"
+                            className="flex items-center w-full px-3 py-2 text-sm font-medium rounded-md cursor-pointer transition-colors duration-200 hover:bg-secondary/80 hover:text-foreground"
                           >
                             <Moon className="mr-3 h-4 w-4 text-muted-foreground" />
                             Dark Theme
@@ -458,7 +458,7 @@ export function Navbar({
                               setTheme('system');
                               setIsMenuOpen(false);
                             }}
-                            className="flex items-center w-full px-3 py-2 text-sm font-medium rounded-md cursor-pointer transition-colors duration-200 hover:bg-accent/80 hover:text-accent-foreground"
+                            className="flex items-center w-full px-3 py-2 text-sm font-medium rounded-md cursor-pointer transition-colors duration-200 hover:bg-secondary/80 hover:text-foreground"
                           >
                             <Settings className="mr-3 h-4 w-4 text-muted-foreground" />
                             System Theme
@@ -479,7 +479,7 @@ export function Navbar({
                       <>
                         <ViewTransitionLink
                           href="/login"
-                          className="flex items-center px-3 py-2 text-sm font-medium rounded-md cursor-pointer transition-colors duration-200 hover:bg-accent/80 hover:text-accent-foreground"
+                          className="flex items-center px-3 py-2 text-sm font-medium rounded-md cursor-pointer transition-colors duration-200 hover:bg-secondary/80 hover:text-foreground"
                           onClick={() => setIsMenuOpen(false)}
                         >
                           <UserIcon className="mr-3 h-4 w-4 text-muted-foreground" />
@@ -491,7 +491,7 @@ export function Navbar({
                               setTheme('light');
                               setIsMenuOpen(false);
                             }}
-                            className="flex items-center w-full px-3 py-2 text-sm font-medium rounded-md cursor-pointer transition-colors duration-200 hover:bg-accent/80 hover:text-accent-foreground"
+                            className="flex items-center w-full px-3 py-2 text-sm font-medium rounded-md cursor-pointer transition-colors duration-200 hover:bg-secondary/80 hover:text-foreground"
                           >
                             <Sun className="mr-3 h-4 w-4 text-muted-foreground" />
                             Light Theme
@@ -501,7 +501,7 @@ export function Navbar({
                               setTheme('dark');
                               setIsMenuOpen(false);
                             }}
-                            className="flex items-center w-full px-3 py-2 text-sm font-medium rounded-md cursor-pointer transition-colors duration-200 hover:bg-accent/80 hover:text-accent-foreground"
+                            className="flex items-center w-full px-3 py-2 text-sm font-medium rounded-md cursor-pointer transition-colors duration-200 hover:bg-secondary/80 hover:text-foreground"
                           >
                             <Moon className="mr-3 h-4 w-4 text-muted-foreground" />
                             Dark Theme
@@ -511,7 +511,7 @@ export function Navbar({
                               setTheme('system');
                               setIsMenuOpen(false);
                             }}
-                            className="flex items-center w-full px-3 py-2 text-sm font-medium rounded-md cursor-pointer transition-colors duration-200 hover:bg-accent/80 hover:text-accent-foreground"
+                            className="flex items-center w-full px-3 py-2 text-sm font-medium rounded-md cursor-pointer transition-colors duration-200 hover:bg-secondary/80 hover:text-foreground"
                           >
                             <Settings className="mr-3 h-4 w-4 text-muted-foreground" />
                             System Theme

@@ -5,10 +5,44 @@ import { verifyAccessToken } from '../lib/jwt';
 import { AuthService } from '../services/auth.service';
 import { UserService } from '../services/user.service';
 
-// Middleware to extract and verify JWT token
+// Helper function to extract user from userInfo cookie (OAuth users)
+function getUserFromCookie(c: Context) {
+  try {
+    const userInfoCookie = getCookie(c, 'userInfo');
+    if (userInfoCookie) {
+      return JSON.parse(userInfoCookie);
+    }
+    return null;
+  } catch (error) {
+    return null;
+  }
+}
+
+// Enhanced middleware to support both JWT and OAuth authentication
 export const authMiddleware = async (c: Context, next: Next) => {
   try {
-    // Get access token from cookie or Authorization header
+    // First, try OAuth authentication (userInfo cookie)
+    const oauthUser = getUserFromCookie(c);
+    if (oauthUser && oauthUser.id) {
+      // Verify the OAuth user still exists and is valid
+      const userService = new UserService(c.env);
+      const user = await userService.getUserById(oauthUser.id);
+
+      if (user && user.is_verified) {
+        c.set('user', {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          isVerified: user.is_verified,
+          authMethod: 'oauth',
+        });
+        await next();
+        return;
+      }
+    }
+
+    // Fallback to JWT authentication
     let token: string | undefined;
 
     // First try to get from cookie
@@ -48,6 +82,7 @@ export const authMiddleware = async (c: Context, next: Next) => {
       name: user.name,
       role: user.role,
       isVerified: user.is_verified,
+      authMethod: 'jwt',
     });
 
     await next();
@@ -120,10 +155,31 @@ export const sellerMiddleware = async (c: Context, next: Next) => {
   await next();
 };
 
-// Optional auth middleware (doesn't throw if no token)
+// Optional auth middleware (doesn't throw if no token) - Enhanced with OAuth support
 export const optionalAuthMiddleware = async (c: Context, next: Next) => {
   try {
-    // Get access token from cookie or Authorization header
+    // First, try OAuth authentication (userInfo cookie)
+    const oauthUser = getUserFromCookie(c);
+    if (oauthUser && oauthUser.id) {
+      // Verify the OAuth user still exists and is valid
+      const userService = new UserService(c.env);
+      const user = await userService.getUserById(oauthUser.id);
+
+      if (user && user.is_verified) {
+        c.set('user', {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          isVerified: user.is_verified,
+          authMethod: 'oauth',
+        });
+        await next();
+        return;
+      }
+    }
+
+    // Fallback to JWT authentication
     let token: string | undefined;
 
     // First try to get from cookie
@@ -153,6 +209,7 @@ export const optionalAuthMiddleware = async (c: Context, next: Next) => {
           name: user.name,
           role: user.role,
           isVerified: user.is_verified,
+          authMethod: 'jwt',
         });
       }
     }

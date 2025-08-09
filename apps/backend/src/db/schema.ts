@@ -19,17 +19,27 @@ export const users = pgTable(
     id: uuid('id').primaryKey().defaultRandom(),
     name: varchar('name', { length: 255 }).notNull(),
     email: varchar('email', { length: 255 }).notNull().unique(),
-    password_hash: text('password_hash').notNull(),
+    password_hash: text('password_hash'), // Made nullable for OAuth users
     role: varchar('role', { length: 20 }).notNull().default('USER'), // USER, SELLER, ADMIN
     phone_number: varchar('phone_number', { length: 20 }),
     profile_image_url: text('profile_image_url'), // ImageKit URL for profile image
     is_verified: boolean('is_verified').notNull().default(false),
+
+    // OAuth fields
+    google_id: varchar('google_id', { length: 255 }), // Google OAuth ID
+    oauth_provider: varchar('oauth_provider', { length: 50 }), // 'google', 'facebook', etc.
+    oauth_access_token: text('oauth_access_token'), // OAuth access token (encrypted)
+    oauth_refresh_token: text('oauth_refresh_token'), // OAuth refresh token (encrypted)
+    oauth_token_expires_at: timestamp('oauth_token_expires_at'), // OAuth token expiry
+
     created_at: timestamp('created_at').notNull().defaultNow(),
     updated_at: timestamp('updated_at').notNull().defaultNow(),
   },
   table => ({
     emailIdx: index('email_idx').on(table.email),
     roleIdx: index('role_idx').on(table.role),
+    googleIdIdx: index('google_id_idx').on(table.google_id),
+    oauthProviderIdx: index('oauth_provider_idx').on(table.oauth_provider),
   })
 );
 
@@ -118,6 +128,12 @@ export const insertUserSchema = createInsertSchema(users, {
   role: z.enum(['USER', 'SELLER', 'ADMIN']),
   phone_number: z.string().optional(),
   profile_image_url: z.string().url().optional(),
+  password_hash: z.string().optional(), // Optional for OAuth users
+  google_id: z.string().optional(),
+  oauth_provider: z.enum(['google', 'facebook', 'twitter', 'github']).optional(),
+  oauth_access_token: z.string().optional(),
+  oauth_refresh_token: z.string().optional(),
+  oauth_token_expires_at: z.date().optional(),
 });
 
 export const selectUserSchema = createSelectSchema(users);

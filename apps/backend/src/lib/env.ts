@@ -26,6 +26,16 @@ const envSchema = z.object({
   FRONTEND_URL: z.string().url('Invalid frontend URL').default('http://localhost:3000'),
   BACKEND_URL: z.string().url('Invalid backend URL').default('http://localhost:8787'),
 
+  // Google OAuth Configuration
+  GOOGLE_CLIENT_ID: z.string().min(1, 'Google Client ID is required'),
+  GOOGLE_CLIENT_SECRET: z.string().min(1, 'Google Client Secret is required'),
+  GOOGLE_CALLBACK_URL: z.string().url('Invalid Google callback URL'),
+
+  // Session Configuration
+  SESSION_SECRET: z.string().min(32, 'Session secret must be at least 32 characters'),
+  SESSION_NAME: z.string().default('hamsoya_session'),
+  SESSION_MAX_AGE: z.string().transform(val => parseInt(val, 10)).pipe(z.number().int().positive()).default('86400000'),
+
   // Optional ImageKit configuration (for reference)
   IMAGEKIT_PUBLIC_KEY: z.string().optional(),
   IMAGEKIT_PRIVATE_KEY: z.string().optional(),
@@ -107,6 +117,22 @@ export const getConfig = (env?: Record<string, any>) => {
     urls: {
       frontend: validatedEnv.FRONTEND_URL,
       backend: validatedEnv.BACKEND_URL,
+    },
+
+    // Google OAuth
+    googleOAuth: {
+      clientId: validatedEnv.GOOGLE_CLIENT_ID,
+      clientSecret: validatedEnv.GOOGLE_CLIENT_SECRET,
+      callbackUrl: validatedEnv.GOOGLE_CALLBACK_URL,
+    },
+
+    // Session Configuration
+    session: {
+      secret: validatedEnv.SESSION_SECRET,
+      name: validatedEnv.SESSION_NAME,
+      maxAge: validatedEnv.SESSION_MAX_AGE,
+      secure: validatedEnv.NODE_ENV === 'production',
+      sameSite: 'strict' as const,
     },
 
     // Security

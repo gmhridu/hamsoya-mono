@@ -4,7 +4,6 @@
  * Enhanced with instant server-side authentication for ChatGPT-style performance
  */
 
-import { LoginClient } from '@/components/auth/login-client';
 import { ServerActionLoginForm } from '@/components/auth/server-action-login-form';
 import { BRAND_NAME } from '@/lib/constants';
 import type { Metadata } from 'next';
@@ -41,17 +40,10 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-accent/5">
       <div className="w-full max-w-md">
-        {/* Use server action form for proper redirects */}
         <ServerActionLoginForm
           redirectTo={redirectTo}
           error={error}
         />
-
-        {/* Fallback to client form if needed */}
-        {/* <LoginClient
-          redirectTo={redirectTo}
-          error={error}
-        /> */}
       </div>
     </div>
   );

@@ -14,10 +14,12 @@ import { BRAND_NAME } from '@/lib/constants';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Eye, EyeOff, Loader, Lock, Mail, Phone, User } from 'lucide-react';
 import Link from 'next/link';
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
+import { useSearchParams } from 'next/navigation';
+import { GoogleOAuthButton, OAuthSeparator, OAuthErrorHandler, OAuthSuccessHandler } from './google-oauth-button';
 
 // Form schemas - identical to login-client.tsx
 const LoginSchema = z.object({
@@ -54,6 +56,12 @@ export function ServerActionLoginForm({ redirectTo, error }: ServerActionLoginFo
   const [profileImageUrl, setProfileImageUrl] = useState<string | undefined>(undefined);
   const [profileImageFileId, setProfileImageFileId] = useState<string | undefined>(undefined);
   const [isPending, startTransition] = useTransition();
+
+  // Handle OAuth callback parameters
+  const searchParams = useSearchParams();
+  const oauthError = searchParams?.get('error');
+  const oauthMessage = searchParams?.get('message');
+  const newUser = searchParams?.get('new_user') === 'true';
 
   // Login form setup with React Hook Form and Zod validation
   const loginForm = useForm<LoginFormData>({
@@ -180,12 +188,25 @@ export function ServerActionLoginForm({ redirectTo, error }: ServerActionLoginFo
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             {/* Login Tab */}
             <TabsContent value="login" className="space-y-0">
+              {/* OAuth Error/Success Handlers */}
+              <OAuthErrorHandler error={oauthError || undefined} message={oauthMessage || undefined} />
+              <OAuthSuccessHandler newUser={newUser} />
+
               {/* Error message */}
               {error && (
                 <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-sm mb-6">
                   {error}
                 </div>
               )}
+
+              {/* Google OAuth Button */}
+              <div className="space-y-4 mb-6">
+                <GoogleOAuthButton
+                  redirectTo={redirectTo}
+                  disabled={isPending}
+                />
+                <OAuthSeparator />
+              </div>
 
               <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-6">
                 <div className="space-y-2">
@@ -272,6 +293,19 @@ export function ServerActionLoginForm({ redirectTo, error }: ServerActionLoginFo
 
             {/* Register Tab */}
             <TabsContent value="register" className="space-y-0">
+              {/* OAuth Error/Success Handlers */}
+              <OAuthErrorHandler error={oauthError || undefined} message={oauthMessage || undefined} />
+              <OAuthSuccessHandler newUser={newUser} />
+
+              {/* Google OAuth Button */}
+              <div className="space-y-4 mb-6">
+                <GoogleOAuthButton
+                  redirectTo={redirectTo}
+                  disabled={isPending}
+                />
+                <OAuthSeparator />
+              </div>
+
               <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-6">
                 <div className="space-y-2">
                   <Label htmlFor="register-name" className="text-sm font-medium text-foreground">
